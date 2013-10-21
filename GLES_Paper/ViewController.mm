@@ -7,12 +7,13 @@
 //
 
 #import "ViewController.h"
+#import "Define.h"
 
 @interface ViewController () {
     
-    
 }
-@property (strong, nonatomic) EAGLContext *context;
+@property (nonatomic,retain) NSArray *imagePathArray;        // 图片地址
+@property (retain, nonatomic) EAGLContext *context;
 
 - (void)setupGL;
 - (void)tearDownGL;
@@ -28,6 +29,12 @@
     }
     
     [_context release];
+    self.imagePathArray = nil;
+    if (paperBatchs != NULL) {
+        delete [] paperBatchs;
+        paperBatchs = NULL;
+    }
+    
     [super dealloc];
 }
 
@@ -44,6 +51,27 @@
         }
         self.context = nil;
     }
+}
+
+- (id) initWithImagePaths:(NSArray *)paths{
+    if (self = [super init]) {
+        self.imagePathArray = paths;
+    }
+    return self;
+}
+
+-(void) changeSize:(CGSize)size{
+	// Prevent a divide by zero
+	if(size.height == 0)
+		size.height = 1;
+    
+	// Set Viewport to window dimensions
+    glViewport(0, 0, size.width, size.height);
+    
+    viewFrustum.SetPerspective(35.0f, float(size.width)/float(size.height), 1.0f, 1000.0f);
+    
+    projectionMatrix.LoadMatrix(viewFrustum.GetProjectionMatrix());
+    transformPipeline.SetMatrixStacks(modelViewMatix, projectionMatrix);
 }
 
 - (void)viewDidLoad{
@@ -65,6 +93,46 @@
     [self setupGL];
 }
 
+// 创建所有的Paper批次
+- (void) createPaperBatchArray{
+    // 创建paper批次序列
+    if (paperBatchs != NULL) {
+        delete [] paperBatchs;
+        paperBatchs = NULL;
+    }
+    paperBatchs = new GLBatch[self.imagePathArray.count];
+    
+    for (int i = 0; i < self.imagePathArray.count; i++) {
+        paperBatchs[i].Begin(GL_TRIANGLES, 6);
+        // 左半边三角形
+        paperBatchs[i].Color4f(1, 1, 1, 1);
+        paperBatchs[i].Normal3f(0, 0, 1);
+        paperBatchs[i].Vertex3f(0, 1, 0);
+        
+        paperBatchs[i].Color4f(1, 1, 1, 1);
+        paperBatchs[i].Normal3f(0, 0, 1);
+        paperBatchs[i].Vertex3f(0, -1, 0);
+        
+        paperBatchs[i].Color4f(1, 1, 1, 1);
+        paperBatchs[i].Normal3f(0, 0, 1);
+        paperBatchs[i].Vertex3f(-1, 1, 0);
+
+        // 右半边三角形
+        paperBatchs[i].Color4f(1, 1, 1, 1);
+        paperBatchs[i].Normal3f(0, 0, 1);
+        paperBatchs[i].Vertex3f(-1, 1, 0);
+        
+        paperBatchs[i].Color4f(1, 1, 1, 1);
+        paperBatchs[i].Normal3f(0, 0, 1);
+        paperBatchs[i].Vertex3f(0, -1, 0);
+        
+        paperBatchs[i].Color4f(1, 1, 1, 1);
+        paperBatchs[i].Normal3f(0, 0, 1);
+        paperBatchs[i].Vertex3f(-1, -1, 0);
+        paperBatchs[i].End();
+    }
+}
+
 - (void)setupGL{
     [EAGLContext setCurrentContext:self.context];
     
@@ -72,13 +140,7 @@
     shaderManager.InitializeStockShaders();
     
     // 渲染图形
-	GLfloat vVerts[] = { -0.5f, 0.0f, 0.0f,
-        0.5f, 0.0f, 0.0f,
-        0.0f, 0.5f, 0.0f };
-    
-	redBatch.Begin(GL_TRIANGLES, 3);
-	redBatch.CopyVertexData3f(vVerts);
-	redBatch.End();
+    [self createPaperBatchArray];
     
     
     // 着色器
@@ -113,7 +175,17 @@
     // 准备开整
     GLfloat vRed[] = { 1.0f, 0.0f, 0.0f, 1.0f };
 	shaderManager.UseStockShader(GLT_SHADER_IDENTITY, vRed);
-	redBatch.Draw();
+    for (int i = 0; i < self.imagePathArray.count; i++) {
+        paperBatchs[i].Draw();
+    }
+
+}
+
+#pragma mark -
+#pragma mark Rotation 
+- (void) didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation{
+    if(INTERFACE_LANDSCAPELEFT )
+    
 }
 
 @end
