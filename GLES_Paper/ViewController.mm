@@ -14,6 +14,7 @@
 }
 @property (nonatomic,retain) NSArray *imagePathArray;        // 图片地址
 @property (retain, nonatomic) EAGLContext *context;
+@property (nonatomic,retain) UILabel *debugLabel;
 
 - (void)setupGL;
 - (void)tearDownGL;
@@ -30,6 +31,7 @@
     
     [_context release];
     self.imagePathArray = nil;
+    self.debugLabel = nil;
     if (paperBatchs != NULL) {
         delete [] paperBatchs;
         paperBatchs = NULL;
@@ -50,12 +52,14 @@
             [EAGLContext setCurrentContext:nil];
         }
         self.context = nil;
+        self.debugLabel = nil;
     }
 }
 
 - (id) initWithImagePaths:(NSArray *)paths{
     if (self = [super init]) {
         self.imagePathArray = paths;
+        angel = 0;
     }
     return self;
 }
@@ -79,18 +83,32 @@
     
     // EAGL上下文
     self.context = [[[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2] autorelease];
-
     if (!self.context) {
         NSLog(@"Failed to create ES context");
     }
+    
+    // 刷新频率
+    self.preferredFramesPerSecond = 60;
+    
+    // debuglabel
+    self.debugLabel = [[[UILabel alloc] initWithFrame:CGRectMake(20,20,100,30)] autorelease];
+    self.debugLabel.backgroundColor = [UIColor clearColor];
+    self.debugLabel.textColor = [UIColor whiteColor];
+    self.debugLabel.font = [UIFont boldSystemFontOfSize:20.0f];
+    self.debugLabel.textAlignment = NSTextAlignmentCenter;
+    [self.view addSubview:self.debugLabel];
     
     // GL渲染容器层
     GLKView *view = (GLKView *)self.view;
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
+    view.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
     
     // GL初始化配置
     [self setupGL];
+    
+    // 设置Size
+    [self changeSize:self.view.frame.size];
 }
 
 // 创建所有的Paper批次
@@ -103,33 +121,46 @@
     paperBatchs = new GLBatch[self.imagePathArray.count];
     
     for (int i = 0; i < self.imagePathArray.count; i++) {
-        paperBatchs[i].Begin(GL_TRIANGLES, 6);
-        // 左半边三角形
-        paperBatchs[i].Color4f(1, 1, 1, 1);
-        paperBatchs[i].Normal3f(0, 0, 1);
-        paperBatchs[i].Vertex3f(0, 1, 0);
-        
-        paperBatchs[i].Color4f(1, 1, 1, 1);
-        paperBatchs[i].Normal3f(0, 0, 1);
-        paperBatchs[i].Vertex3f(0, -1, 0);
-        
-        paperBatchs[i].Color4f(1, 1, 1, 1);
-        paperBatchs[i].Normal3f(0, 0, 1);
-        paperBatchs[i].Vertex3f(-1, 1, 0);
-
-        // 右半边三角形
-        paperBatchs[i].Color4f(1, 1, 1, 1);
-        paperBatchs[i].Normal3f(0, 0, 1);
-        paperBatchs[i].Vertex3f(-1, 1, 0);
-        
-        paperBatchs[i].Color4f(1, 1, 1, 1);
-        paperBatchs[i].Normal3f(0, 0, 1);
-        paperBatchs[i].Vertex3f(0, -1, 0);
-        
-        paperBatchs[i].Color4f(1, 1, 1, 1);
-        paperBatchs[i].Normal3f(0, 0, 1);
-        paperBatchs[i].Vertex3f(-1, -1, 0);
-        paperBatchs[i].End();
+        if (i % 2 == 0) {
+            // 偶数位翻转
+            paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4);
+            // 左半边三角形
+            paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
+            paperBatchs[i].Normal3f(0, 0, -1.0f);
+            paperBatchs[i].Vertex3f(0, 1.0f, 0);
+            
+            paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
+            paperBatchs[i].Normal3f(0, 0, -1.0f);
+            paperBatchs[i].Vertex3f(0, -1.0f, 0);
+            
+            paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
+            paperBatchs[i].Normal3f(0, 0, -1.0f);
+            paperBatchs[i].Vertex3f(1.0f, 1.0f, 0);
+            
+            paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
+            paperBatchs[i].Normal3f(0, 0, -1.0f);
+            paperBatchs[i].Vertex3f(1.0f, -1.0f, 0);
+            paperBatchs[i].End();
+        }else{
+            paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4);
+            // 左半边三角形
+            paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
+            paperBatchs[i].Normal3f(0, 0, 1.0f);
+            paperBatchs[i].Vertex3f(0, 1.0f, 0);
+            
+            paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
+            paperBatchs[i].Normal3f(0, 0, 1.0f);
+            paperBatchs[i].Vertex3f(0, -1.0f, 0);
+            
+            paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
+            paperBatchs[i].Normal3f(0, 0, 1.0f);
+            paperBatchs[i].Vertex3f(1.0f, 1.0f, 0);
+            
+            paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
+            paperBatchs[i].Normal3f(0, 0, 1.0f);
+            paperBatchs[i].Vertex3f(1.0f, -1.0f, 0);
+            paperBatchs[i].End();
+        }
     }
 }
 
@@ -138,18 +169,11 @@
     
     // 初始化着色器
     shaderManager.InitializeStockShaders();
+    viewFrame.Normalize();
+    viewFrame.MoveForward(-5.0f);
     
     // 渲染图形
     [self createPaperBatchArray];
-    
-    
-    // 着色器
-    // [self loadShaders];
-
-    // 光照效果
-    // self.effect = [[[GLKBaseEffect alloc] init] autorelease];
-    // self.effect.light0.enabled = GL_TRUE;
-    // self.effect.light0.diffuseColor = GLKVector4Make(1.0f, 0.4f, 0.4f, 1.0f);
     
     // 启用深度测试
     glEnable(GL_DEPTH_TEST);
@@ -172,20 +196,47 @@
     // 清除颜色缓冲区和深度缓冲区
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    // 准备开整
+    // 启用深度测试
+    glEnable(GL_DEPTH_TEST);
+    
+    /************************准备开整**************************/
+    // 相机位置
+    M3DMatrix44f mCamera;
+    viewFrame.GetCameraMatrix(mCamera);
+    modelViewMatix.PushMatrix(mCamera);
+    
+    angel = angel - 1;
+    if (angel <= -360) {
+        angel = 0;
+    }
+    
+    const float *tempM;
+    tempM =  transformPipeline.GetModelViewMatrix();
+    for (int i = 0; i < 16; i++) {
+        NSLog(@"%f",tempM[i]);
+    }
+    
+    self.debugLabel.text = [NSString stringWithFormat:@"%d f/s",self.framesPerSecond];
+    
+    modelViewMatix.Rotate(angel, 0.0f, 1.0f, 0.0f);
     GLfloat vRed[] = { 1.0f, 0.0f, 0.0f, 1.0f };
-	shaderManager.UseStockShader(GLT_SHADER_IDENTITY, vRed);
+    GLfloat vLightPos[] = {0.0f, 0.0f, 1.0f};
     for (int i = 0; i < self.imagePathArray.count; i++) {
+        if (i!=0) {
+            modelViewMatix.Rotate(-10, 0.0, 1.0f, 0.0f);
+        }
+        
+        shaderManager.UseStockShader(GLT_SHADER_POINT_LIGHT_DIFF, transformPipeline.GetModelViewMatrix(), transformPipeline.GetProjectionMatrix(),vLightPos, vRed);
         paperBatchs[i].Draw();
     }
-
+    
+    modelViewMatix.PopMatrix();
 }
 
 #pragma mark -
-#pragma mark Rotation 
-- (void) didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation{
-    if(INTERFACE_LANDSCAPELEFT )
-    
+#pragma mark Rotation
+- (void) willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration{
+    [self changeSize:self.view.frame.size];
 }
 
 @end

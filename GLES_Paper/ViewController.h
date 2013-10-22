@@ -25,6 +25,8 @@
     GLMatrixStack       modelViewMatix;         // 模型矩阵
     GLMatrixStack       projectionMatrix;       // 投影矩阵
     GLGeometryTransform transformPipeline;      // 变换管线
+    float angel;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
+-(void) changeSize:(CGSize)size;
 @end

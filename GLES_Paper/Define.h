@@ -7,7 +7,6 @@
 //
 
 #import "AppDelegate.h"
-#import "RootNavController.h"
 
 #ifndef Artist_Define_h
 #define Artist_Define_h

@@ -22,7 +22,12 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions
 {
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
-    self.viewController = [[[ViewController alloc] initWithImagePaths:[NSArray arrayWithObjects:@"",@"", nil]] autorelease];
+
+    NSMutableArray *array = [NSMutableArray arrayWithCapacity:0];
+    for (int i = 0; i < 36; i++) {
+        [array addObject:@""];
+    }
+    self.viewController = [[[ViewController alloc] initWithImagePaths:array] autorelease];
     self.window.rootViewController = self.viewController;
     [self.window makeKeyAndVisible];
     return YES;
