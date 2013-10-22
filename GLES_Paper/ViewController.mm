@@ -9,6 +9,17 @@
 #import "ViewController.h"
 #import "Define.h"
 
+#define PAPER_FRAMESPERSECOND     30                // 刷新频率
+#define PAPER_MIN_ANGLE           (45/6)            // 书页夹角/2
+#define PAPER_MAX_ANGLE           (45)              // (展开书页夹角 - 书页夹角)/2
+#define PAPER_Z_DISTANCE          (-5.0f)           // 沿z轴距离
+#define PAPER_Z_MIN_DISTANCE      1.0f              // 最小z轴距离
+#define PAPER_Z_MAX_DISTANCE      (-10.0f)          // 最大z轴距离
+#define PAPER_PERSPECTIVE_NEAR    1.0f              // 透视场近端
+#define PAPER_PERSPECTIVE_FAR     1000.0f           // 透视场远端
+#define PAPER_PERSPECTIVE_FOVY    35.0f
+#define PAPER_ROTATION_RADIUS     0.1f              // 整体的大圆圈的旋转半径
+
 @interface ViewController () {
     
 }
@@ -69,12 +80,16 @@
 	if(size.height == 0)
 		size.height = 1;
     
-	// Set Viewport to window dimensions
+	// 设置viewPort
     glViewport(0, 0, size.width, size.height);
     
-    viewFrustum.SetPerspective(35.0f, float(size.width)/float(size.height), 1.0f, 1000.0f);
+    // 设置投影透视
+    viewFrustum.SetPerspective(PAPER_PERSPECTIVE_FOVY, float(size.width)/float(size.height), PAPER_PERSPECTIVE_NEAR, PAPER_PERSPECTIVE_FAR);
     
+    // 加载透视投影矩阵
     projectionMatrix.LoadMatrix(viewFrustum.GetProjectionMatrix());
+    
+    // 变换管线
     transformPipeline.SetMatrixStacks(modelViewMatix, projectionMatrix);
 }
 
@@ -88,7 +103,7 @@
     }
     
     // 刷新频率
-    self.preferredFramesPerSecond = 60;
+    self.preferredFramesPerSecond = PAPER_FRAMESPERSECOND;
     
     // debuglabel
     self.debugLabel = [[[UILabel alloc] initWithFrame:CGRectMake(20,20,100,30)] autorelease];
@@ -170,7 +185,7 @@
     // 初始化着色器
     shaderManager.InitializeStockShaders();
     viewFrame.Normalize();
-    viewFrame.MoveForward(-5.0f);
+    viewFrame.MoveForward(PAPER_Z_DISTANCE);
     
     // 渲染图形
     [self createPaperBatchArray];
@@ -204,6 +219,13 @@
     M3DMatrix44f mCamera;
     viewFrame.GetCameraMatrix(mCamera);
     modelViewMatix.PushMatrix(mCamera);
+    
+    // 整体沿+x移动 PAPER_FRAMESPERSECOND
+    modelViewMatix.Translate(PAPER_ROTATION_RADIUS, 0, 0);
+    
+    for (int i = 0; i < self.imagePathArray.count; i++) {
+        
+    }
     
     angel = angel - 1;
     if (angel <= -360) {

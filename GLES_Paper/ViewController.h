@@ -29,4 +29,5 @@
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;
+@property (nonatomic,assign) NSInteger pageIndex;
 @end
