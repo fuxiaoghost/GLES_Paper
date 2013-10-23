@@ -9,16 +9,16 @@
 #import "ViewController.h"
 #import "Define.h"
 
-#define PAPER_FRAMESPERSECOND     30                // 刷新频率
-#define PAPER_MIN_ANGLE           (45/6)            // 书页夹角/2
-#define PAPER_MAX_ANGLE           (45)              // (展开书页夹角 - 书页夹角)/2
+#define PAPER_FRAMESPERSECOND     60                // 刷新频率
+#define PAPER_MIN_ANGLE           (M_PI_4/4)            // 书页夹角/2
+#define PAPER_MAX_ANGLE           M_PI_4              // (展开书页夹角 - 书页夹角)/2
 #define PAPER_Z_DISTANCE          (-5.0f)           // 沿z轴距离
 #define PAPER_Z_MIN_DISTANCE      1.0f              // 最小z轴距离
 #define PAPER_Z_MAX_DISTANCE      (-10.0f)          // 最大z轴距离
 #define PAPER_PERSPECTIVE_NEAR    1.0f              // 透视场近端
 #define PAPER_PERSPECTIVE_FAR     1000.0f           // 透视场远端
 #define PAPER_PERSPECTIVE_FOVY    35.0f
-#define PAPER_ROTATION_RADIUS     0.1f              // 整体的大圆圈的旋转半径
+#define PAPER_ROTATION_RADIUS     0.3f              // 整体的大圆圈的旋转半径
 
 @interface ViewController () {
     
@@ -118,6 +118,7 @@
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
     view.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
+    view.drawableMultisample = GLKViewDrawableMultisampleNone;
     
     // GL初始化配置
     [self setupGL];
@@ -137,7 +138,7 @@
     
     for (int i = 0; i < self.imagePathArray.count; i++) {
         if (i % 2 == 0) {
-            // 偶数位翻转
+            // 奇数位翻转
             paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4);
             // 左半边三角形
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
@@ -158,7 +159,7 @@
             paperBatchs[i].End();
         }else{
             paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4);
-            // 左半边三角形
+            // 右半边三角形
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
             paperBatchs[i].Normal3f(0, 0, 1.0f);
             paperBatchs[i].Vertex3f(0, 1.0f, 0);
@@ -218,41 +219,56 @@
     // 相机位置
     M3DMatrix44f mCamera;
     viewFrame.GetCameraMatrix(mCamera);
-    modelViewMatix.PushMatrix(mCamera);
     
-    // 整体沿+x移动 PAPER_FRAMESPERSECOND
-    modelViewMatix.Translate(PAPER_ROTATION_RADIUS, 0, 0);
     
-    for (int i = 0; i < self.imagePathArray.count; i++) {
-        
-    }
-    
-    angel = angel - 1;
-    if (angel <= -360) {
+    angel = angel - 0.01;
+    if (angel < - M_PI * 2) {
         angel = 0;
     }
     
-    const float *tempM;
-    tempM =  transformPipeline.GetModelViewMatrix();
-    for (int i = 0; i < 16; i++) {
-        NSLog(@"%f",tempM[i]);
+    // 奇数旋转-PAPER_MIN_ANGLE；偶数旋转PAPER_MIN_ANGLE
+    for (int i = 0; i < self.imagePathArray.count ; i++) {
+        
+        // 4、照相机机位
+        modelViewMatix.PushMatrix(mCamera);
+        
+        // 3、
+        modelViewMatix.Rotate(angel, 0, 1, 0);
+        
+        // 2、绕y轴旋转
+        int count = self.imagePathArray.count/2;
+        int index = i/2;
+        int num = count - index - 1;
+        
+        
+        float degree0 = 2 * atanf(sinf(PAPER_MIN_ANGLE)/(PAPER_ROTATION_RADIUS + cosf(PAPER_MIN_ANGLE)));
+        float degree1 = 2 * atanf(sinf(PAPER_MAX_ANGLE)/(PAPER_ROTATION_RADIUS + cosf(PAPER_MAX_ANGLE)));
+        if (index <= self.pageIndex) {
+            
+        }
+        modelViewMatix.Rotate(- num * degree0, 0, 1, 0);
+
+        
+        
+        // 1、整体沿+x移动 PAPER_ROTATION_RADIUS
+        modelViewMatix.Translate(PAPER_ROTATION_RADIUS, 0, 0);
+        
+        // 0、自身旋转
+        if (i % 2 != 0) {
+            modelViewMatix.Rotate(PAPER_MIN_ANGLE, 0, 1, 0);
+        }else{
+            modelViewMatix.Rotate(-PAPER_MIN_ANGLE, 0, 1, 0);
+        }
+        
+        GLfloat vRed[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+        GLfloat vLightPos[] = {0.0f, 0.0f, 1.0f};
+        shaderManager.UseStockShader(GLT_SHADER_POINT_LIGHT_DIFF, transformPipeline.GetModelViewMatrix(), transformPipeline.GetProjectionMatrix(),vLightPos, vRed);
+        paperBatchs[i].Draw();
+        
+        modelViewMatix.PopMatrix();
     }
     
     self.debugLabel.text = [NSString stringWithFormat:@"%d f/s",self.framesPerSecond];
-    
-    modelViewMatix.Rotate(angel, 0.0f, 1.0f, 0.0f);
-    GLfloat vRed[] = { 1.0f, 0.0f, 0.0f, 1.0f };
-    GLfloat vLightPos[] = {0.0f, 0.0f, 1.0f};
-    for (int i = 0; i < self.imagePathArray.count; i++) {
-        if (i!=0) {
-            modelViewMatix.Rotate(-10, 0.0, 1.0f, 0.0f);
-        }
-        
-        shaderManager.UseStockShader(GLT_SHADER_POINT_LIGHT_DIFF, transformPipeline.GetModelViewMatrix(), transformPipeline.GetProjectionMatrix(),vLightPos, vRed);
-        paperBatchs[i].Draw();
-    }
-    
-    modelViewMatix.PopMatrix();
 }
 
 #pragma mark -

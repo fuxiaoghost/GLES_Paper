@@ -114,7 +114,7 @@ class GLMatrixStack
             			
 		void Rotate(GLfloat angle, GLfloat x, GLfloat y, GLfloat z) {
 			M3DMatrix44f mTemp, mRotate;
-			m3dRotationMatrix44(mRotate, float(m3dDegToRad(angle)), x, y, z);
+			m3dRotationMatrix44(mRotate, angle, x, y, z);
 			m3dCopyMatrix44(mTemp, pStack[stackPointer]);
 			m3dMatrixMultiply44(pStack[stackPointer], mTemp, mRotate);
 			}
