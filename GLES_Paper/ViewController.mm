@@ -10,7 +10,7 @@
 #import "Define.h"
 
 #define PAPER_FRAMESPERSECOND     60                // 刷新频率
-#define PAPER_MIN_ANGLE           (M_PI_4/4)            // 书页夹角/2
+#define PAPER_MIN_ANGLE           (M_PI_4/6)            // 书页夹角/2
 #define PAPER_MAX_ANGLE           M_PI_4              // (展开书页夹角 - 书页夹角)/2
 #define PAPER_Z_DISTANCE          (-5.0f)           // 沿z轴距离
 #define PAPER_Z_MIN_DISTANCE      1.0f              // 最小z轴距离
@@ -19,6 +19,7 @@
 #define PAPER_PERSPECTIVE_FAR     1000.0f           // 透视场远端
 #define PAPER_PERSPECTIVE_FOVY    35.0f
 #define PAPER_ROTATION_RADIUS     0.3f              // 整体的大圆圈的旋转半径
+#define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE) // 沿x轴距离
 
 @interface ViewController () {
     
@@ -26,6 +27,7 @@
 @property (nonatomic,retain) NSArray *imagePathArray;        // 图片地址
 @property (retain, nonatomic) EAGLContext *context;
 @property (nonatomic,retain) UILabel *debugLabel;
+@property (nonatomic,assign) PaperStatus paperStatus;           // 书页的当前状态(PaperNormal,PaperUnfold,PaperFold)
 
 - (void)setupGL;
 - (void)tearDownGL;
@@ -96,6 +98,11 @@
 - (void)viewDidLoad{
     [super viewDidLoad];
     
+    // 准备数据
+    moveSensitivity = self.view.frame.size.width/5;
+    pinchSensitivity = moveSensitivity;
+    pinchSensitivity_ = 1.0f - pinchSensitivity/2;
+    
     // EAGL上下文
     self.context = [[[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2] autorelease];
     if (!self.context) {
@@ -125,6 +132,30 @@
     
     // 设置Size
     [self changeSize:self.view.frame.size];
+    
+    // 添加手势
+    [self addGesture];
+}
+
+- (void) addGesture{
+    // 滑动翻页手势
+    panGesture = [[[UIPanGestureRecognizer alloc]initWithTarget:self action:@selector(paningGestureReceive:)]autorelease];
+    [self.view addGestureRecognizer:panGesture];
+    panGesture.minimumNumberOfTouches = 1;
+    panGesture.maximumNumberOfTouches = 1;
+    
+    
+    // 双指捏合手势
+    pinchGesture = [[[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinchGestureReceive:)] autorelease];
+    [self.view addGestureRecognizer:pinchGesture];
+    [pinchGesture requireGestureRecognizerToFail:panGesture];
+    
+    // 点击手势
+    UITapGestureRecognizer *tapGesture = [[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGestureReceive:)] autorelease];
+    [self.view addGestureRecognizer:tapGesture];
+    tapGesture.numberOfTapsRequired = 1;
+    tapGesture.numberOfTouchesRequired = 1;
+    [tapGesture requireGestureRecognizerToFail:panGesture];
 }
 
 // 创建所有的Paper批次
@@ -142,39 +173,39 @@
             paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4);
             // 左半边三角形
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
-            paperBatchs[i].Normal3f(0, 0, -1.0f);
-            paperBatchs[i].Vertex3f(0, 1.0f, 0);
+            paperBatchs[i].Normal3f(1, 0.0f, 0.0f);
+            paperBatchs[i].Vertex3f(0, 1.0f, 0.0f);
             
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
-            paperBatchs[i].Normal3f(0, 0, -1.0f);
+            paperBatchs[i].Normal3f(1, 0.0f, 0.0f);
             paperBatchs[i].Vertex3f(0, -1.0f, 0);
             
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
-            paperBatchs[i].Normal3f(0, 0, -1.0f);
-            paperBatchs[i].Vertex3f(1.0f, 1.0f, 0);
+            paperBatchs[i].Normal3f(1, 0.0f, 0.0f);
+            paperBatchs[i].Vertex3f(0.0f, 1.0f, 1.0f);
             
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
-            paperBatchs[i].Normal3f(0, 0, -1.0f);
-            paperBatchs[i].Vertex3f(1.0f, -1.0f, 0);
+            paperBatchs[i].Normal3f(1, 0.0f, 0.0f);
+            paperBatchs[i].Vertex3f(0.0f, -1.0f, 1.0f);
             paperBatchs[i].End();
         }else{
             paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4);
             // 右半边三角形
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
-            paperBatchs[i].Normal3f(0, 0, 1.0f);
+            paperBatchs[i].Normal3f(-1.0f, 0.0f, 0.0f);
             paperBatchs[i].Vertex3f(0, 1.0f, 0);
             
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
-            paperBatchs[i].Normal3f(0, 0, 1.0f);
+            paperBatchs[i].Normal3f(-1.0f, 0.0f, 0.0f);
             paperBatchs[i].Vertex3f(0, -1.0f, 0);
             
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
-            paperBatchs[i].Normal3f(0, 0, 1.0f);
-            paperBatchs[i].Vertex3f(1.0f, 1.0f, 0);
+            paperBatchs[i].Normal3f(-1.0f, 0.0f, 0.0f);
+            paperBatchs[i].Vertex3f(0.0f, 1.0f, 1.0f);
             
             paperBatchs[i].Color4f(1.0f, 0.0f, 0.0f, 1.0f);
-            paperBatchs[i].Normal3f(0, 0, 1.0f);
-            paperBatchs[i].Vertex3f(1.0f, -1.0f, 0);
+            paperBatchs[i].Normal3f(-1.0f, 0.0f, 0.0f);
+            paperBatchs[i].Vertex3f(0.0f, -1.0f, 1.0f);
             paperBatchs[i].End();
         }
     }
@@ -233,25 +264,23 @@
         modelViewMatix.PushMatrix(mCamera);
         
         // 3、
-        modelViewMatix.Rotate(angel, 0, 1, 0);
+        //modelViewMatix.Rotate(angel, 0, 1, 0);
         
         // 2、绕y轴旋转
-        int count = self.imagePathArray.count/2;
-        int index = i/2;
-        int num = count - index - 1;
-        
-        
-        float degree0 = 2 * atanf(sinf(PAPER_MIN_ANGLE)/(PAPER_ROTATION_RADIUS + cosf(PAPER_MIN_ANGLE)));
-        float degree1 = 2 * atanf(sinf(PAPER_MAX_ANGLE)/(PAPER_ROTATION_RADIUS + cosf(PAPER_MAX_ANGLE)));
+        NSInteger index = (i + 1)/2;
+        float yRotate = 0;
         if (index <= self.pageIndex) {
-            
+            yRotate = -PAPER_MAX_ANGLE;
+        }else{
+            yRotate = PAPER_MAX_ANGLE;
         }
-        modelViewMatix.Rotate(- num * degree0, 0, 1, 0);
+        modelViewMatix.Rotate(yRotate, 0, 1, 0);
 
-        
-        
-        // 1、整体沿+x移动 PAPER_ROTATION_RADIUS
-        modelViewMatix.Translate(PAPER_ROTATION_RADIUS, 0, 0);
+        // 1、整体沿+x移动 PAPER_X_DISTANCE
+        index = i/2;
+        float xDistance = 0;
+        xDistance = (index - self.pageIndex) * 2 * PAPER_X_DISTANCE;
+        modelViewMatix.Translate(xDistance, 0, 0);
         
         // 0、自身旋转
         if (i % 2 != 0) {
@@ -260,7 +289,7 @@
             modelViewMatix.Rotate(-PAPER_MIN_ANGLE, 0, 1, 0);
         }
         
-        GLfloat vRed[] = { 1.0f, 0.0f, 0.0f, 1.0f };
+        GLfloat vRed[] = { 1.0f, 1.0f, 1.0f, 1.0f };
         GLfloat vLightPos[] = {0.0f, 0.0f, 1.0f};
         shaderManager.UseStockShader(GLT_SHADER_POINT_LIGHT_DIFF, transformPipeline.GetModelViewMatrix(), transformPipeline.GetProjectionMatrix(),vLightPos, vRed);
         paperBatchs[i].Draw();
@@ -269,6 +298,214 @@
     }
     
     self.debugLabel.text = [NSString stringWithFormat:@"%d f/s",self.framesPerSecond];
+}
+
+
+#pragma mark -
+#pragma mark PanMove & PinchMove
+- (float) touchLengthMoveTo:(CGPoint)touchPoint{
+    return -touchPoint.x + startTouch.x;
+}
+
+- (float) pinchLengthMoveTo:(CGPoint)touchPoint0 anotherPoint:(CGPoint)touchPoint1{
+    float x0 = ABS(pinchTouch0.x - pinchTouch1.x);
+    float x1 =  ABS(touchPoint0.x - touchPoint1.x);
+    return x1 - x0;
+}
+
+#pragma mark -
+#pragma mark MoveChange
+
+// 单手滑动
+- (void) moveChange:(float)move{
+    NSInteger currentIndex = startPageIndex + (int)(move/moveSensitivity);
+    if (currentIndex < 0 || currentIndex >= self.imagePathArray.count) {
+        return;
+    }
+    
+    // 当前页面的值
+    self.pageIndex = currentIndex;
+    
+    float pageRemainder = 0;
+    if (move > 0) {
+        pageRemainder = move - moveSensitivity * ((int)(move/moveSensitivity));
+        if (pageRemainder > moveSensitivity/2) {
+            currentIndex++;
+        }
+    }else if(move < 0){
+        pageRemainder = (-move) + moveSensitivity * ((int)(move/moveSensitivity));
+        if (pageRemainder > moveSensitivity/2) {
+            currentIndex--;
+        }
+    }
+    
+    // 下一页的预测值
+    NSInteger nextPageIndex = move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
+    
+    NSLog(@"%f",pageRemainder/moveSensitivity);
+}
+
+#pragma mark -
+#pragma mark PinchChange
+// 捏合运动
+- (void) pinchChange:(float)move{
+}
+
+#pragma mark -
+#pragma mark GestureReceive
+// 点击
+- (void) tapGestureReceive:(UITapGestureRecognizer *)recoginzer{
+    if (self.paperStatus == PaperUnfold || self.paperStatus == PaperFold) {
+        
+//        [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveLinear animations:^{
+//            [self pinchChange:pinchSensitivity/4];
+//        } completion:^(BOOL finished) {
+//            [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveLinear animations:^{
+//                [self pinchChange:pinchSensitivity/2];
+//            } completion:^(BOOL finished) {
+//                [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveLinear animations:^{
+//                    [self pinchChange:pinchSensitivity* 3/4];
+//                } completion:^(BOOL finished) {
+//                    [UIView animateWithDuration:0.3 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveLinear animations:^{
+//                        [self resetViews];
+//                    } completion:^(BOOL finished) {
+//                        
+//                    }];
+//                }];
+//            }];
+//        }];
+    }else if(self.paperStatus == PaperNormal){
+//        [self unfoldAnimated];
+    }
+}
+
+- (void) preloadImages{
+//    float move = [self touchLengthMoveTo:endTouch];
+//    float pageRemainder = 0;
+//    if (move > 0) {
+//        pageRemainder = move - moveSensitivity * ((int)(move/moveSensitivity));
+//    }else if(move < 0){
+//        pageRemainder = (-move) + moveSensitivity * ((int)(move/moveSensitivity));
+//    }
+//    if (pageRemainder > moveSensitivity/2) {
+//        if (move > 0) {
+//            if (self.pageIndex + 1 < self.imageArray.count) {
+//                self.pageIndex++;
+//            }
+//        }else{
+//            if (self.pageIndex - 1 >= 0 ) {
+//                self.pageIndex--;
+//            }
+//        }
+//    }
+}
+
+// 滑动
+- (void)paningGestureReceive:(UIPanGestureRecognizer *)recoginzer{
+    if (isPinching || self.paperStatus == PaperFold) {
+        return;
+    }
+    // begin paning 显示last screenshot
+    if (recoginzer.state == UIGestureRecognizerStateBegan) {
+        if (self.paperStatus == PaperUnfold) {
+            //[self resetViewsAnimated:CGPointZero time:0.4];
+            return;
+        }
+        endTouch = [recoginzer locationOfTouch:0 inView:self.view];
+        startTouch = endTouch;
+        startPageIndex = self.pageIndex;
+        isMoving = YES;
+    }else if (recoginzer.state == UIGestureRecognizerStateEnded){
+        //[self preloadImages];
+        //[self resetViewsAnimated:endTouch time:0.3];
+        isMoving = NO;
+        return;
+        // cancal panning 回弹
+    }else if (recoginzer.state == UIGestureRecognizerStateCancelled){
+        //[self preloadImages];
+        //[self resetViewsAnimated:endTouch time:0.3];
+        isMoving = NO;
+        return;
+    }else if(recoginzer.state == UIGestureRecognizerStateChanged){
+        endTouch = [recoginzer locationOfTouch:0 inView:self.view];
+        if (isMoving) {
+            float move = [self touchLengthMoveTo:endTouch];
+            [self moveChange:move];
+        }
+    }
+    
+}
+
+// 捏合
+- (void) pinchGestureReceive:(UIPinchGestureRecognizer *)recoginzer{
+    
+    if (recoginzer.state == UIGestureRecognizerStateBegan) {
+        // 限制为双指操作
+        if ([recoginzer numberOfTouches] <= 1) {
+            return;
+        }
+        panGesture.enabled = NO;
+        
+        isPinching = YES;
+        pinchTouch0 = [recoginzer locationOfTouch:0 inView:self.view];
+        pinchTouch1 = [recoginzer locationOfTouch:1 inView:self.view];
+    }else if (recoginzer.state == UIGestureRecognizerStateEnded){
+        isPinching = NO;
+        
+        if (self.paperStatus == PaperNormal) {
+            if (scope < -100) {
+                // 捏合
+               // [self foldAnimated];
+            }else if(scope > 100){
+                // 展开
+                //[self unfoldAnimated];
+            }else{
+                //[self resetViewsAnimated:CGPointMake(0, 0) time:0.3];
+                // 还原
+            }
+        }else if(self.paperStatus == PaperUnfold){
+            if (scope < - 100) {
+                // 还原
+                //[self resetViewsAnimated:CGPointMake(0, 0) time:0.3];
+            }else{
+                // 展开
+                //[self unfoldAnimated];
+            }
+        }else if(self.paperStatus == PaperFold){
+            if (scope > 100 && scope < pinchSensitivity) {
+                // 还原
+                //[self resetViewsAnimated:CGPointMake(0, 0) time:0.6];
+            }else if(scope > pinchSensitivity){
+                // 展开
+                //[self unfoldAnimated];
+            }else{
+                // 捏合
+                //[self foldAnimated];
+            }
+        }
+        [panGesture performSelector:@selector(setEnabled:) withObject:[NSNumber numberWithBool:YES] afterDelay:0.3];
+        return;
+        // cancal panning 回弹
+    }else if (recoginzer.state == UIGestureRecognizerStateCancelled){
+        isPinching = NO;
+        //[self resetViewsAnimated:startTouch time:0.3];
+        panGesture.enabled = YES;
+        return;
+    }else if(recoginzer.state == UIGestureRecognizerStateChanged){
+        // 限制为双指操作
+        if ([recoginzer numberOfTouches] <= 1) {
+            return;
+        }
+        if (isPinching) {
+            scope = 0;
+            CGPoint touch0 = [recoginzer locationOfTouch:0 inView:self.view];
+            CGPoint touch1 = [recoginzer locationOfTouch:1 inView:self.view];
+            
+            scope = [self pinchLengthMoveTo:touch0 anotherPoint:touch1];
+            
+            [self pinchChange:scope];
+        }
+    }
 }
 
 #pragma mark -

@@ -6,6 +6,12 @@
 //  Copyright (c) 2013年 Dawn. All rights reserved.
 //
 
+typedef enum {
+    PaperNormal,
+    PaperFold,
+    PaperUnfold
+}PaperStatus;
+
 #import <UIKit/UIKit.h>
 #import <GLKit/GLKit.h>
 #import "GLTools.h"
@@ -18,6 +24,7 @@
 
 @interface ViewController : GLKViewController{
 @private
+    float angel;
     GLShaderManager     shaderManager;          // 着色器
     GLFrame             viewFrame;              // 相机
     GLFrustum           viewFrustum;            // 透视
@@ -25,7 +32,19 @@
     GLMatrixStack       modelViewMatix;         // 模型矩阵
     GLMatrixStack       projectionMatrix;       // 投影矩阵
     GLGeometryTransform transformPipeline;      // 变换管线
-    float angel;
+    UIPanGestureRecognizer *panGesture;         // 手指滑动手势
+    UIPinchGestureRecognizer *pinchGesture;     // 手指捏合手势
+    BOOL isMoving;                              // 单手滑动翻页，是否正在移动
+    BOOL isPinching;                            // 双手捏合，是否正在移动
+    CGPoint startTouch;                         // 记录单手滑动初始位置
+    CGPoint endTouch;                           // 记录单手滑动结束位置
+    CGPoint pinchTouch0;                        // 记录捏合手势初始位置0
+    CGPoint pinchTouch1;                        // 记录捏合手势初始位置1
+    NSInteger startPageIndex;                   // 滑动开始前当前页
+    float scope;                                // 手指捏合、展开的尺度
+    float moveSensitivity;                      // 翻一页所需要的滑动距离
+    float pinchSensitivity;                     // 捏合一页所需要的滑动距离
+    float pinchSensitivity_;                    // 展开一页所需要的滑动距离
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;
