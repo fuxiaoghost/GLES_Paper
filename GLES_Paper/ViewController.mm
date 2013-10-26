@@ -9,7 +9,7 @@
 #import "ViewController.h"
 #import "Define.h"
 
-#define PAPER_FRAMESPERSECOND     60                // 刷新频率
+#define PAPER_FRAMESPERSECOND     30                // 刷新频率
 #define PAPER_MIN_ANGLE           (M_PI_4/6)            // 书页夹角/2
 #define PAPER_MAX_ANGLE           M_PI_4              // (展开书页夹角 - 书页夹角)/2
 #define PAPER_Z_DISTANCE          (-5.0f)           // 沿z轴距离
@@ -20,6 +20,7 @@
 #define PAPER_PERSPECTIVE_FOVY    35.0f
 #define PAPER_ROTATION_RADIUS     0.3f              // 整体的大圆圈的旋转半径
 #define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE) // 沿x轴距离
+#define PAPER_RADIUS              (2 * PAPER_X_DISTANCE)
 
 @interface ViewController () {
     
@@ -257,6 +258,12 @@
         angel = 0;
     }
     
+    
+    float y = (-cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS) + sqrtf((cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) * (cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) - 4 * (x * x - 2 * PAPER_RADIUS * x)))/2;
+    float theta = asinf(y * sinf(M_PI - 2 * PAPER_MAX_ANGLE)/PAPER_RADIUS);
+    
+    NSLog(@"x:%f y:%f",x,y);
+    
     // 奇数旋转-PAPER_MIN_ANGLE；偶数旋转PAPER_MIN_ANGLE
     for (int i = 0; i < self.imagePathArray.count ; i++) {
         
@@ -265,8 +272,8 @@
         
         // 3、
         //modelViewMatix.Rotate(angel, 0, 1, 0);
-        
-        // 2、绕y轴旋转
+
+        // 3、绕y轴旋转
         NSInteger index = (i + 1)/2;
         float yRotate = 0;
         if (index <= self.pageIndex) {
@@ -275,11 +282,48 @@
             yRotate = PAPER_MAX_ANGLE;
         }
         modelViewMatix.Rotate(yRotate, 0, 1, 0);
+        
+        // 2、绕固定点旋转
+        if (nextPageIndex > self.pageIndex) {
+            if (index == self.pageIndex + 1) {
+                // 2.2
+                modelViewMatix.Translate(PAPER_RADIUS - x, 0, 0);
+                // 2.1
+                modelViewMatix.Rotate(-theta, 0, 1, 0);
+                // 2.0
+                modelViewMatix.Translate(-(PAPER_RADIUS - x), 0, 0);
+            }
+        }else{
+            if (index == self.pageIndex) {
+                // 2.2
+                modelViewMatix.Translate(-(PAPER_RADIUS - x), 0, 0);
+                // 2.1
+                modelViewMatix.Rotate(theta, 0, 1, 0);
+                // 2.0
+                modelViewMatix.Translate(PAPER_RADIUS - x, 0, 0);
+            }
+        }
 
         // 1、整体沿+x移动 PAPER_X_DISTANCE
         index = i/2;
+        NSInteger tindex = (i + 1)/2;
         float xDistance = 0;
         xDistance = (index - self.pageIndex) * 2 * PAPER_X_DISTANCE;
+        if (nextPageIndex > self.pageIndex) {
+            if (tindex <= self.pageIndex ) {
+                xDistance = xDistance - y;
+            }else{
+                xDistance = xDistance - x;
+            }
+            
+        }else{
+            if (tindex <= self.pageIndex) {
+                xDistance = xDistance + x;
+            }else{
+                xDistance = xDistance + y;
+            }
+        }
+        
         modelViewMatix.Translate(xDistance, 0, 0);
         
         // 0、自身旋转
@@ -340,9 +384,9 @@
     }
     
     // 下一页的预测值
-    NSInteger nextPageIndex = move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
+    nextPageIndex = move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
     
-    NSLog(@"%f",pageRemainder/moveSensitivity);
+    x = PAPER_RADIUS * pageRemainder/moveSensitivity;
 }
 
 #pragma mark -

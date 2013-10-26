@@ -45,6 +45,11 @@ typedef enum {
     float moveSensitivity;                      // 翻一页所需要的滑动距离
     float pinchSensitivity;                     // 捏合一页所需要的滑动距离
     float pinchSensitivity_;                    // 展开一页所需要的滑动距离
+    
+    
+    //
+    NSInteger nextPageIndex;                    // 下一页的预测值
+    float x;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;
