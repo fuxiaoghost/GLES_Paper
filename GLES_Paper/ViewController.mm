@@ -9,7 +9,7 @@
 #import "ViewController.h"
 #import "Define.h"
 
-#define PAPER_FRAMESPERSECOND     30                // 刷新频率
+#define PAPER_FRAMESPERSECOND     60                // 刷新频率
 #define PAPER_MIN_ANGLE           (M_PI_4/6)            // 书页夹角/2
 #define PAPER_MAX_ANGLE           M_PI_4              // (展开书页夹角 - 书页夹角)/2
 #define PAPER_Z_DISTANCE          (-5.0f)           // 沿z轴距离
@@ -100,7 +100,7 @@
     [super viewDidLoad];
     
     // 准备数据
-    moveSensitivity = self.view.frame.size.width/5;
+    moveSensitivity = self.view.frame.size.width;
     pinchSensitivity = moveSensitivity;
     pinchSensitivity_ = 1.0f - pinchSensitivity/2;
     
@@ -239,6 +239,10 @@
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
+    // 重置变换
+    [self resetViewsTimes:0.3];
+    
+    
     // 清理画布
     glClearColor(0.65f, 0.65f, 0.65f, 1.0f);
     // 清除颜色缓冲区和深度缓冲区
@@ -262,7 +266,6 @@
     float y = (-cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS) + sqrtf((cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) * (cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) - 4 * (x * x - 2 * PAPER_RADIUS * x)))/2;
     float theta = asinf(y * sinf(M_PI - 2 * PAPER_MAX_ANGLE)/PAPER_RADIUS);
     
-    NSLog(@"x:%f y:%f",x,y);
     
     // 奇数旋转-PAPER_MIN_ANGLE；偶数旋转PAPER_MIN_ANGLE
     for (int i = 0; i < self.imagePathArray.count ; i++) {
@@ -363,7 +366,7 @@
 // 单手滑动
 - (void) moveChange:(float)move{
     NSInteger currentIndex = startPageIndex + (int)(move/moveSensitivity);
-    if (currentIndex < 0 || currentIndex >= self.imagePathArray.count) {
+    if (currentIndex < 0 || currentIndex >= self.imagePathArray.count/2) {
         return;
     }
     
@@ -393,6 +396,45 @@
 #pragma mark PinchChange
 // 捏合运动
 - (void) pinchChange:(float)move{
+}
+
+#pragma mark -
+#pragma mark ResetViews
+
+- (void) resetViewsTimes:(float)time{
+    if (needReset) {
+        if (currentTime == 0) {
+            currentTime = CFAbsoluteTimeGetCurrent();
+            currentX = x;
+        }
+        CFTimeInterval timeOffset = CFAbsoluteTimeGetCurrent() - currentTime;
+        if (timeOffset > time) {
+            needReset = NO;
+            currentTime = 0.0f;
+            if (currentX < PAPER_RADIUS * 0.1) {
+                x = 0;
+            }else{
+                x = 0;
+                if (nextPageIndex >= 0 && nextPageIndex < self.imagePathArray.count/2) {
+                    self.pageIndex = nextPageIndex;
+                }
+            }
+        }else{
+            if (currentX < PAPER_RADIUS*0.1) {
+                acceleration = 2 * currentX/(time * time);
+                x = currentX - (2 * currentX * timeOffset/time - acceleration * timeOffset * timeOffset/2);
+            }else{
+                if (nextPageIndex < 0 || nextPageIndex >= self.imagePathArray.count/2) {
+                    acceleration = 2 * currentX/(time * time);
+                    x = currentX - (2 * currentX * timeOffset/time - acceleration * timeOffset * timeOffset/2);
+                }else{
+                    acceleration = 2 * (PAPER_RADIUS -currentX)/(time * time);
+                    x = currentX + (2 * (PAPER_RADIUS -currentX) * timeOffset/time - acceleration * timeOffset * timeOffset/2);
+                }
+            }
+            NSLog(@"%f",x);
+        }
+    }
 }
 
 #pragma mark -
@@ -452,7 +494,7 @@
     // begin paning 显示last screenshot
     if (recoginzer.state == UIGestureRecognizerStateBegan) {
         if (self.paperStatus == PaperUnfold) {
-            //[self resetViewsAnimated:CGPointZero time:0.4];
+            needReset = YES;
             return;
         }
         endTouch = [recoginzer locationOfTouch:0 inView:self.view];
@@ -460,14 +502,12 @@
         startPageIndex = self.pageIndex;
         isMoving = YES;
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
-        //[self preloadImages];
-        //[self resetViewsAnimated:endTouch time:0.3];
+        needReset = YES;
         isMoving = NO;
         return;
         // cancal panning 回弹
     }else if (recoginzer.state == UIGestureRecognizerStateCancelled){
-        //[self preloadImages];
-        //[self resetViewsAnimated:endTouch time:0.3];
+        needReset = YES;
         isMoving = NO;
         return;
     }else if(recoginzer.state == UIGestureRecognizerStateChanged){
@@ -556,6 +596,7 @@
 #pragma mark Rotation
 - (void) willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration{
     [self changeSize:self.view.frame.size];
+    moveSensitivity = self.view.frame.size.width;
 }
 
 @end

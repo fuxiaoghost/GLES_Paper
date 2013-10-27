@@ -50,6 +50,10 @@ typedef enum {
     //
     NSInteger nextPageIndex;                    // 下一页的预测值
     float x;
+    BOOL needReset;
+    CFAbsoluteTime currentTime;
+    float currentX;
+    float acceleration;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;

@@ -28,7 +28,7 @@
         [array addObject:@""];
     }
     self.viewController = [[[ViewController alloc] initWithImagePaths:array] autorelease];
-    self.viewController.pageIndex = 5;
+    self.viewController.pageIndex = 0;
     self.window.rootViewController = self.viewController;
     [self.window makeKeyAndVisible];
     return YES;
