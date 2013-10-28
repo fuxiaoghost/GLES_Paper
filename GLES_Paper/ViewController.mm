@@ -337,7 +337,7 @@
         }
         
         GLfloat vRed[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-        GLfloat vLightPos[] = {0.0f, 0.0f, 1.0f};
+        GLfloat vLightPos[] = {0.2f, 0.2f, 1.0f};
         shaderManager.UseStockShader(GLT_SHADER_POINT_LIGHT_DIFF, transformPipeline.GetModelViewMatrix(), transformPipeline.GetProjectionMatrix(),vLightPos, vRed);
         paperBatchs[i].Draw();
         
@@ -386,6 +386,9 @@
         }
     }
     
+    // 变换曲线 y= x * x 减慢起始速度
+    pageRemainder = pageRemainder * pageRemainder/moveSensitivity;
+    
     // 下一页的预测值
     nextPageIndex = move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
     
@@ -420,6 +423,7 @@
                 }
             }
         }else{
+            // s = v0 * t - (1/2) * a * t * t; 减速运动
             if (currentX < PAPER_RADIUS*0.1) {
                 acceleration = 2 * currentX/(time * time);
                 x = currentX - (2 * currentX * timeOffset/time - acceleration * timeOffset * timeOffset/2);
@@ -432,7 +436,6 @@
                     x = currentX + (2 * (PAPER_RADIUS -currentX) * timeOffset/time - acceleration * timeOffset * timeOffset/2);
                 }
             }
-            NSLog(@"%f",x);
         }
     }
 }
