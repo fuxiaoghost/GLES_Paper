@@ -12,6 +12,15 @@ typedef enum {
     PaperUnfold
 }PaperStatus;
 
+typedef struct {
+    GLint lightColor;
+    GLint lightPosition;
+    GLint mvpMatrix;
+    GLint mvMatrix;
+    GLint normalMatrix;
+    GLint shaderId;
+}PaperFlatLightShader;
+
 #import <UIKit/UIKit.h>
 #import <GLKit/GLKit.h>
 #import "GLTools.h"
@@ -46,6 +55,8 @@ typedef enum {
     float pinchSensitivity;                     // 捏合一页所需要的滑动距离
     float pinchSensitivity_;                    // 展开一页所需要的滑动距离
     
+    // 着色器
+    PaperFlatLightShader paperFlatLightShader;  // 书页着色器
     
     //
     NSInteger nextPageIndex;                    // 下一页的预测值

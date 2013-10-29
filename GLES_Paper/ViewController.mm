@@ -11,8 +11,8 @@
 
 #define PAPER_FRAMESPERSECOND     60                // 刷新频率
 #define PAPER_MIN_ANGLE           (M_PI_4/6)            // 书页夹角/2
-#define PAPER_MAX_ANGLE           M_PI_4              // (展开书页夹角 - 书页夹角)/2
-#define PAPER_Z_DISTANCE          (-5.0f)           // 沿z轴距离
+#define PAPER_MAX_ANGLE           (M_PI_4)              // (展开书页夹角 - 书页夹角)/2
+#define PAPER_Z_DISTANCE          (-6.0f)           // 沿z轴距离
 #define PAPER_Z_MIN_DISTANCE      1.0f              // 最小z轴距离
 #define PAPER_Z_MAX_DISTANCE      (-10.0f)          // 最大z轴距离
 #define PAPER_PERSPECTIVE_NEAR    1.0f              // 透视场近端
@@ -36,6 +36,8 @@
 
 @implementation ViewController
 
+
+
 - (void)dealloc{
     [self tearDownGL];
     
@@ -50,6 +52,7 @@
         delete [] paperBatchs;
         paperBatchs = NULL;
     }
+    
     
     [super dealloc];
 }
@@ -68,6 +71,14 @@
         self.context = nil;
         self.debugLabel = nil;
     }
+}
+
+- (void)tearDownGL{
+    // 清理GL的资源
+    [EAGLContext setCurrentContext:self.context];
+    
+    // 删除着色器
+    glDeleteProgram(paperFlatLightShader.shaderId);
 }
 
 - (id) initWithImagePaths:(NSArray *)paths{
@@ -217,6 +228,9 @@
     
     // 初始化着色器
     shaderManager.InitializeStockShaders();
+    [self initShaders];
+    
+    // 初始化相机
     viewFrame.Normalize();
     viewFrame.MoveForward(PAPER_Z_DISTANCE);
     
@@ -227,31 +241,25 @@
     glEnable(GL_DEPTH_TEST);
 }
 
-- (void)tearDownGL{
-    // 清理GL的资源
-    [EAGLContext setCurrentContext:self.context];
+// 构造需要的着色器
+- (void) initShaders{
+    const char *vph = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"vph"] cStringUsingEncoding:NSASCIIStringEncoding];
+    const char *fph = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fph"] cStringUsingEncoding:NSASCIIStringEncoding];
+    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vph, fph, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",
+                                                                    GLT_ATTRIBUTE_NORMAL, "vNormal");
+    
+    
+	paperFlatLightShader.lightColor = glGetUniformLocation(paperFlatLightShader.shaderId, "diffuseColor");
+	paperFlatLightShader.lightPosition = glGetUniformLocation(paperFlatLightShader.shaderId, "vLightPosition");
+	paperFlatLightShader.mvpMatrix = glGetUniformLocation(paperFlatLightShader.shaderId, "mvpMatrix");
+	paperFlatLightShader.mvMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "mvMatrix");
+	paperFlatLightShader.normalMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "normalMatrix");
 }
+
 
 #pragma mark - GLKView and GLKViewController delegate methods
 
-- (void)update{
-    
-}
-
-- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
-    // 重置变换
-    [self resetViewsTimes:0.3];
-    
-    
-    // 清理画布
-    glClearColor(0.65f, 0.65f, 0.65f, 1.0f);
-    // 清除颜色缓冲区和深度缓冲区
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    // 启用深度测试
-    glEnable(GL_DEPTH_TEST);
-    
-    /************************准备开整**************************/
+- (void) drawPapers{
     // 相机位置
     M3DMatrix44f mCamera;
     viewFrame.GetCameraMatrix(mCamera);
@@ -275,7 +283,7 @@
         
         // 3、
         //modelViewMatix.Rotate(angel, 0, 1, 0);
-
+        
         // 3、绕y轴旋转
         NSInteger index = (i + 1)/2;
         float yRotate = 0;
@@ -306,7 +314,7 @@
                 modelViewMatix.Translate(PAPER_RADIUS - x, 0, 0);
             }
         }
-
+        
         // 1、整体沿+x移动 PAPER_X_DISTANCE
         index = i/2;
         NSInteger tindex = (i + 1)/2;
@@ -327,6 +335,8 @@
             }
         }
         
+    
+        
         modelViewMatix.Translate(xDistance, 0, 0);
         
         // 0、自身旋转
@@ -336,13 +346,39 @@
             modelViewMatix.Rotate(-PAPER_MIN_ANGLE, 0, 1, 0);
         }
         
-        GLfloat vRed[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        // 启用着色器
+        GLfloat vLightColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
         GLfloat vLightPos[] = {0.2f, 0.2f, 1.0f};
-        shaderManager.UseStockShader(GLT_SHADER_POINT_LIGHT_DIFF, transformPipeline.GetModelViewMatrix(), transformPipeline.GetProjectionMatrix(),vLightPos, vRed);
+        glUseProgram(paperFlatLightShader.shaderId);
+		glUniform4fv(paperFlatLightShader.lightColor, 1, vLightColor);
+		glUniform3fv(paperFlatLightShader.lightPosition, 1, vLightPos);
+		glUniformMatrix4fv(paperFlatLightShader.mvpMatrix, 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+		glUniformMatrix4fv(paperFlatLightShader.mvMatrix, 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+		glUniformMatrix3fv(paperFlatLightShader.normalMatrix, 1, GL_FALSE, transformPipeline.GetNormalMatrix());
+        
         paperBatchs[i].Draw();
         
         modelViewMatix.PopMatrix();
     }
+}
+
+- (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
+    // 重置变换
+    [self resetViewsTimes:0.3];
+    
+    
+    // 清理画布
+    glClearColor(0.65f, 0.65f, 0.65f, 1.0f);
+    // 清除颜色缓冲区和深度缓冲区
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    
+    // 启用深度测试
+    glEnable(GL_DEPTH_TEST);
+    
+    /************************准备开整**************************/
+   
+    // 绘制基本图形
+    [self drawPapers];
     
     self.debugLabel.text = [NSString stringWithFormat:@"%d f/s",self.framesPerSecond];
 }
