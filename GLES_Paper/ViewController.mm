@@ -243,10 +243,10 @@
 
 // 构造需要的着色器
 - (void) initShaders{
-    const char *vph = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"vph"] cStringUsingEncoding:NSASCIIStringEncoding];
-    const char *fph = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fph"] cStringUsingEncoding:NSASCIIStringEncoding];
-    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vph, fph, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",
-                                                                    GLT_ATTRIBUTE_NORMAL, "vNormal");
+    NSString *vph = [[NSBundle mainBundle] pathForResource:@"Default" ofType:@"png"];
+    NSString *fph = [[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fph"];
+//    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vph, fph, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",
+//                                                                    GLT_ATTRIBUTE_NORMAL, "vNormal");
     
     
 	paperFlatLightShader.lightColor = glGetUniformLocation(paperFlatLightShader.shaderId, "diffuseColor");
