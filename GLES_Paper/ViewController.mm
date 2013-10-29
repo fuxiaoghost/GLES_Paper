@@ -11,8 +11,8 @@
 
 #define PAPER_FRAMESPERSECOND     60                // 刷新频率
 #define PAPER_MIN_ANGLE           (M_PI_4/6)            // 书页夹角/2
-#define PAPER_MAX_ANGLE           (M_PI_4)              // (展开书页夹角 - 书页夹角)/2
-#define PAPER_Z_DISTANCE          (-6.0f)           // 沿z轴距离
+#define PAPER_MAX_ANGLE           (M_PI_4-M_PI_4/4)              // (展开书页夹角 - 书页夹角)/2
+#define PAPER_Z_DISTANCE          (-5.0f)           // 沿z轴距离
 #define PAPER_Z_MIN_DISTANCE      1.0f              // 最小z轴距离
 #define PAPER_Z_MAX_DISTANCE      (-10.0f)          // 最大z轴距离
 #define PAPER_PERSPECTIVE_NEAR    1.0f              // 透视场近端
@@ -243,10 +243,9 @@
 
 // 构造需要的着色器
 - (void) initShaders{
-    NSString *vph = [[NSBundle mainBundle] pathForResource:@"Default" ofType:@"png"];
-    NSString *fph = [[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fph"];
-//    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vph, fph, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",
-//                                                                    GLT_ATTRIBUTE_NORMAL, "vNormal");
+    const char *vsh = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
+    const char *fsh = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
+    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vsh, fsh, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal");
     
     
 	paperFlatLightShader.lightColor = glGetUniformLocation(paperFlatLightShader.shaderId, "diffuseColor");
@@ -443,10 +442,10 @@
 - (void) resetViewsTimes:(float)time{
     if (needReset) {
         if (currentTime == 0) {
-            currentTime = CFAbsoluteTimeGetCurrent();
+            currentTime = stopWatch.GetElapsedSeconds();
             currentX = x;
         }
-        CFTimeInterval timeOffset = CFAbsoluteTimeGetCurrent() - currentTime;
+        CFTimeInterval timeOffset = stopWatch.GetElapsedSeconds() - currentTime;
         if (timeOffset > time) {
             needReset = NO;
             currentTime = 0.0f;

@@ -30,9 +30,14 @@ void main(void){
     vec3 vLightDir = normalize(vLightPosition - vPosition3);
     // 从点乘积得到漫反射强度
     float diff = max(0.0,dot(vEyeNormal,vLightDir));
+    
     // 用强度乘以漫反射颜色，将alpha设置为1.0
     vVaryingColor.xyz = diff * diffuseColor.xyz;
     vVaryingColor.a = 1.0;
+    
+    // 环境光
+    vec4 ambientColor = vec4(0.2,0.2,0.2,1.0);
+    vVaryingColor += ambientColor;
     
     // 变换
     gl_Position = mvpMatrix * vVertex;

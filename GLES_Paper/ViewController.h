@@ -30,6 +30,7 @@ typedef struct {
 #import "GLFrustum.h"
 #import "GLMatrixStack.h"
 #import "GLGeometryTransform.h"
+#import "StopWatch.h"
 
 @interface ViewController : GLKViewController{
 @private
@@ -65,6 +66,9 @@ typedef struct {
     CFAbsoluteTime currentTime;
     float currentX;
     float acceleration;
+    
+    // 停表
+    CStopWatch stopWatch;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;
