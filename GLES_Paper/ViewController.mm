@@ -74,6 +74,7 @@
     
     // 删除着色器
     glDeleteProgram(paperFlatLightShader.shaderId);
+    glDeleteProgram(backgroundFlatLightShader.shaderId);
     
     // 删除纹理
     glDeleteTextures(1, &backgroundTexture);
@@ -339,14 +340,46 @@
 	paperFlatLightShader.normalMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "normalMatrix");
     
     // background shader
+    vp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"vp"] cStringUsingEncoding:NSUTF8StringEncoding];
+    fp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"fp"] cStringUsingEncoding:NSUTF8StringEncoding];
+    backgroundFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp,3,GLT_ATTRIBUTE_VERTEX,"vVertex",GLT_ATTRIBUTE_NORMAL,"vNormal",GLT_ATTRIBUTE_TEXTURE0,"vTexture0");
     
+    backgroundFlatLightShader.mvpMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "mvpMatrix");
+    backgroundFlatLightShader.mvMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "mvMatrix");
+    backgroundFlatLightShader.normalMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "normalMatrix");
+    backgroundFlatLightShader.lightPosition = glGetUniformLocation(backgroundFlatLightShader.shaderId, "vLightPosition");
+    backgroundFlatLightShader.ambientColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "ambientColor");
+    backgroundFlatLightShader.diffuseColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "diffuseColor");
+    backgroundFlatLightShader.specularColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "diffuseColor");
+    backgroundFlatLightShader.colorMap = glGetUniformLocation(backgroundFlatLightShader.shaderId, "colorMap");
 }
 
 
 #pragma mark - GLKView and GLKViewController delegate methods
 
 - (void) drawBackground{
+    modelViewMatix.PushMatrix();
+    // 绑定纹理
+    glBindTexture(GL_TEXTURE_2D, backgroundTexture);
     
+    // 绑定着色器
+    glUseProgram(backgroundFlatLightShader.shaderId);
+    
+    // 传递数据给着色器
+    GLfloat vAmbientColor[] = { 0.2f, 0.2f, 0.2f, 0.2f };   // 环境光
+    GLfloat vDiffuseColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };   // 散射光
+    GLfloat vSpecularColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };  // 镜面光
+    
+    GLfloat vLightPos[] = {0.0f, 0.0f, 1.0f};
+    glUniform4fv(backgroundFlatLightShader.ambientColor, 1, vAmbientColor);
+    glUniform4fv(backgroundFlatLightShader.diffuseColor, 1, vDiffuseColor);
+    glUniform4fv(backgroundFlatLightShader.specularColor, 1, vSpecularColor);
+    glUniform3fv(backgroundFlatLightShader.lightPosition, 1, vLightPos);
+    glUniformMatrix4fv(backgroundFlatLightShader.mvpMatrix, 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
+    glUniformMatrix4fv(backgroundFlatLightShader.mvMatrix, 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
+    glUniformMatrix3fv(backgroundFlatLightShader.normalMatrix, 1, GL_FALSE, transformPipeline.GetNormalMatrix());
+    
+    modelViewMatix.PopMatrix();
 }
 
 - (void) drawPapers{

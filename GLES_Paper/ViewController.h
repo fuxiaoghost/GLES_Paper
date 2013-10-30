@@ -30,6 +30,7 @@ typedef struct {
     GLint diffuseColor;
     GLint specularColor;
     GLint colorMap;
+    GLint shaderId;
 }BackgroundFlatLightShader;
 
 #import <UIKit/UIKit.h>
@@ -59,6 +60,7 @@ typedef struct {
     
     // 着色器
     PaperFlatLightShader paperFlatLightShader;  // 书页着色器
+    BackgroundFlatLightShader backgroundFlatLightShader;    // 背景着色器
     
     
     GLMatrixStack       modelViewMatix;         // 模型矩阵
