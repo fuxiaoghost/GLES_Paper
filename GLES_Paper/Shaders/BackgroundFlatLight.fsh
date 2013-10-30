@@ -21,13 +21,13 @@ void main(void){
     float diff = max(0.0,dot(normalize(vVaryingNormal),normalize(vVaryingLight)));
     
     // 漫射光
-    vFragColor = diff * diffuseColor;
+    gl_FragColor = diff * diffuseColor;
     
     // 环境光
-    vFragColor += ambientColor;
+    gl_FragColor += ambientColor;
     
     // 纹理
-    vFragColor *= texture(colorMap, vTextureCoords);
+    gl_FragColor *= texture2D(colorMap,vTextCoords);
     
     // 镜面光
     vec3 vReflection = normalize(reflect(-normalize(vVaryingLight),normalize(vVaryingNormal)));
@@ -35,6 +35,6 @@ void main(void){
     
     if(diff != 0.0){
         float fSpec = pow(spec,128.0);
-        vFragColor.rgb += vec3(fSpec,fSpec,fSpec);
+        gl_FragColor.rgb += vec3(fSpec,fSpec,fSpec);
     }
 }

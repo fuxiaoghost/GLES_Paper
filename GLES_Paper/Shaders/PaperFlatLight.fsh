@@ -9,6 +9,6 @@ precision mediump float;
 
 varying vec4 vVaryingColor;
 
-void main(){
+void main(void){
     gl_FragColor = vVaryingColor;
 }

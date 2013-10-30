@@ -234,27 +234,27 @@
 - (void) createBackgroundBatch{
     // 创建纹理
     
-    backgroundBatch.Begin(GL_TRIANGLE_STRIP, 4);
+    backgroundBatch.Begin(GL_TRIANGLE_STRIP, 4,1); // 四个顶点一个纹理
     
     // 右上
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
     backgroundBatch.Vertex3f(1.0f, 1.0f, 0.0f);
-    backgroundBatch.MultiTexCoord2f(backgroundTexture, 1.0f, 1.0f);
+    backgroundBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
     
     // 左上
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
     backgroundBatch.Vertex3f(-1.0f, 1.0f, 0.0f);
-    backgroundBatch.MultiTexCoord2f(backgroundTexture, -1.0f, 1.0f);
+    backgroundBatch.MultiTexCoord2f(0, 0.0f, 1.0f);
     
     // 左下
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
     backgroundBatch.Vertex3f(-1.0f, -1.0f, 0.0f);
-    backgroundBatch.MultiTexCoord2f(backgroundTexture, -1.0f, -1.0f);
+    backgroundBatch.MultiTexCoord2f(0, 0.0f, 0.0f);
     
     // 右下
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
     backgroundBatch.Vertex3f(1.0f, -1.0f, 0.0f);
-    backgroundBatch.MultiTexCoord2f(backgroundTexture, 1.0f, -1.0f);
+    backgroundBatch.MultiTexCoord2f(0, 1.0f, 0.0f);
     
     backgroundBatch.End();
 }
@@ -328,8 +328,8 @@
 - (void) initShaders{
     
     // paper shader
-    const char *vp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"vp"] cStringUsingEncoding:NSUTF8StringEncoding];
-    const char *fp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fp"] cStringUsingEncoding:NSUTF8StringEncoding];
+    const char *vp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
+    const char *fp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
     paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal");
     
     
@@ -340,8 +340,8 @@
 	paperFlatLightShader.normalMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "normalMatrix");
     
     // background shader
-    vp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"vp"] cStringUsingEncoding:NSUTF8StringEncoding];
-    fp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"fp"] cStringUsingEncoding:NSUTF8StringEncoding];
+    vp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
+    fp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
     backgroundFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp,3,GLT_ATTRIBUTE_VERTEX,"vVertex",GLT_ATTRIBUTE_NORMAL,"vNormal",GLT_ATTRIBUTE_TEXTURE0,"vTexture0");
     
     backgroundFlatLightShader.mvpMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "mvpMatrix");
@@ -355,10 +355,14 @@
 }
 
 
-#pragma mark - GLKView and GLKViewController delegate methods
+#pragma mark - 
+#pragma mark 绘图
 
+// 绘制背景
 - (void) drawBackground{
     modelViewMatix.PushMatrix();
+    modelViewMatix.Translate(0, 0, -1.0f);
+    
     // 绑定纹理
     glBindTexture(GL_TEXTURE_2D, backgroundTexture);
     
@@ -366,7 +370,7 @@
     glUseProgram(backgroundFlatLightShader.shaderId);
     
     // 传递数据给着色器
-    GLfloat vAmbientColor[] = { 0.2f, 0.2f, 0.2f, 0.2f };   // 环境光
+    GLfloat vAmbientColor[] = { 0.2f, 0.2f, 0.2f, 1.0f };   // 环境光
     GLfloat vDiffuseColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };   // 散射光
     GLfloat vSpecularColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };  // 镜面光
     
@@ -378,10 +382,13 @@
     glUniformMatrix4fv(backgroundFlatLightShader.mvpMatrix, 1, GL_FALSE, transformPipeline.GetModelViewProjectionMatrix());
     glUniformMatrix4fv(backgroundFlatLightShader.mvMatrix, 1, GL_FALSE, transformPipeline.GetModelViewMatrix());
     glUniformMatrix3fv(backgroundFlatLightShader.normalMatrix, 1, GL_FALSE, transformPipeline.GetNormalMatrix());
+    glUniform1f(backgroundFlatLightShader.colorMap, 0);
+    backgroundBatch.Draw();
     
     modelViewMatix.PopMatrix();
 }
 
+// 绘制所有的书页
 - (void) drawPapers{
     // 相机位置
     M3DMatrix44f mCamera;
@@ -500,8 +507,12 @@
     
     /************************准备开整**************************/
    
-    // 绘制基本图形
-    [self drawPapers];
+    // 绘制背景
+    [self drawBackground];
+    
+    // 绘制书页
+    //[self drawPapers];
+    
     
     self.debugLabel.text = [NSString stringWithFormat:@"%d f/s",self.framesPerSecond];
 }

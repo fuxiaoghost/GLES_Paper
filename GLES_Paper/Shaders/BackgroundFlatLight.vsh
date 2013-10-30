@@ -8,7 +8,7 @@
 
 attribute vec4 vVertex;
 attribute vec3 vNormal;
-attribute vTexture0;
+attribute vec2 vTexture0;
 
 uniform mat4 mvpMatrix;
 uniform mat4 mvMatrix;
