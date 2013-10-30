@@ -48,11 +48,6 @@
     [_context release];
     self.imagePathArray = nil;
     self.debugLabel = nil;
-    if (paperBatchs != NULL) {
-        delete [] paperBatchs;
-        paperBatchs = NULL;
-    }
-    
     
     [super dealloc];
 }
@@ -79,6 +74,15 @@
     
     // 删除着色器
     glDeleteProgram(paperFlatLightShader.shaderId);
+    
+    // 删除纹理
+    glDeleteTextures(1, &backgroundTexture);
+    
+    // 删除图形批次
+    if (paperBatchs != NULL) {
+        delete [] paperBatchs;
+        paperBatchs = NULL;
+    }
 }
 
 - (id) initWithImagePaths:(NSArray *)paths{
@@ -170,6 +174,8 @@
     [tapGesture requireGestureRecognizerToFail:panGesture];
 }
 
+#pragma mark -
+#pragma mark 创建渲染图形的批次
 // 创建所有的Paper批次
 - (void) createPaperBatchArray{
     // 创建paper批次序列
@@ -223,6 +229,78 @@
     }
 }
 
+// 创建background的批次
+- (void) createBackgroundBatch{
+    // 创建纹理
+    
+    backgroundBatch.Begin(GL_TRIANGLE_STRIP, 4);
+    
+    // 右上
+    backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
+    backgroundBatch.Vertex3f(1.0f, 1.0f, 0.0f);
+    backgroundBatch.MultiTexCoord2f(backgroundTexture, 1.0f, 1.0f);
+    
+    // 左上
+    backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
+    backgroundBatch.Vertex3f(-1.0f, 1.0f, 0.0f);
+    backgroundBatch.MultiTexCoord2f(backgroundTexture, -1.0f, 1.0f);
+    
+    // 左下
+    backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
+    backgroundBatch.Vertex3f(-1.0f, -1.0f, 0.0f);
+    backgroundBatch.MultiTexCoord2f(backgroundTexture, -1.0f, -1.0f);
+    
+    // 右下
+    backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
+    backgroundBatch.Vertex3f(1.0f, -1.0f, 0.0f);
+    backgroundBatch.MultiTexCoord2f(backgroundTexture, 1.0f, -1.0f);
+    
+    backgroundBatch.End();
+}
+
+#pragma mark -
+#pragma mark 创建绘图所需的纹理
+- (void) loadTextureWithId:(GLuint *)textureId imageFilePath:(NSString *)filePath{
+    glGenTextures(1, textureId);
+    glBindTexture(GL_TEXTURE_2D, *textureId);
+    
+    // 环绕模式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    // 过滤模式
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    
+    glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+    
+    NSData *texData = [[NSData alloc] initWithContentsOfFile:filePath];
+    UIImage *image = [[UIImage alloc] initWithData:texData];
+    if (image == nil)
+        NSLog(@"Do real error checking here");
+    
+    GLuint width = CGImageGetWidth(image.CGImage);
+    GLuint height = CGImageGetHeight(image.CGImage);
+    CGColorSpaceRef colorSpace = CGColorSpaceCreateDeviceRGB();
+    void *imageData = malloc(height * width * 4);
+    CGContextRef context = CGBitmapContextCreate(imageData, width, height, 8, 4 * width, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
+    CGColorSpaceRelease(colorSpace);
+    CGContextClearRect(context, CGRectMake(0, 0, width, height));
+    CGContextTranslateCTM(context, 0, height - height);
+    CGContextDrawImage(context, CGRectMake(0, 0, width, height), image.CGImage);
+    
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,GL_UNSIGNED_BYTE, imageData);
+    
+    CGContextRelease(context);
+    
+    free(imageData);
+    [image release];
+    [texData release];
+}
+
+- (void) createBackgroundTexture{
+    [self loadTextureWithId:&backgroundTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"backgroundTile" ofType:@"png"]];
+}
+
 - (void)setupGL{
     [EAGLContext setCurrentContext:self.context];
     
@@ -234,8 +312,12 @@
     viewFrame.Normalize();
     viewFrame.MoveForward(PAPER_Z_DISTANCE);
     
-    // 渲染图形
-    [self createPaperBatchArray];
+    // 准备纹理
+    [self createBackgroundTexture];
+    
+    // 准备渲染图形的批次
+    [self createPaperBatchArray];       // papers
+    [self createBackgroundBatch];
     
     // 启用深度测试
     glEnable(GL_DEPTH_TEST);
@@ -243,9 +325,11 @@
 
 // 构造需要的着色器
 - (void) initShaders{
-    const char *vsh = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
-    const char *fsh = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
-    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vsh, fsh, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal");
+    
+    // paper shader
+    const char *vp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"vp"] cStringUsingEncoding:NSUTF8StringEncoding];
+    const char *fp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fp"] cStringUsingEncoding:NSUTF8StringEncoding];
+    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal");
     
     
 	paperFlatLightShader.lightColor = glGetUniformLocation(paperFlatLightShader.shaderId, "diffuseColor");
@@ -253,10 +337,17 @@
 	paperFlatLightShader.mvpMatrix = glGetUniformLocation(paperFlatLightShader.shaderId, "mvpMatrix");
 	paperFlatLightShader.mvMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "mvMatrix");
 	paperFlatLightShader.normalMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "normalMatrix");
+    
+    // background shader
+    
 }
 
 
 #pragma mark - GLKView and GLKViewController delegate methods
+
+- (void) drawBackground{
+    
+}
 
 - (void) drawPapers{
     // 相机位置

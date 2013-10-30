@@ -21,6 +21,17 @@ typedef struct {
     GLint shaderId;
 }PaperFlatLightShader;
 
+typedef struct {
+    GLint mvpMatrix;
+    GLint mvMatrix;
+    GLint normalMatrix;
+    GLint lightPosition;
+    GLint ambientColor;
+    GLint diffuseColor;
+    GLint specularColor;
+    GLint colorMap;
+}BackgroundFlatLightShader;
+
 #import <UIKit/UIKit.h>
 #import <GLKit/GLKit.h>
 #import "GLTools.h"
@@ -38,7 +49,18 @@ typedef struct {
     GLShaderManager     shaderManager;          // 着色器
     GLFrame             viewFrame;              // 相机
     GLFrustum           viewFrustum;            // 透视
+    
+    /* 绘图批次 */
     GLBatch             *paperBatchs;           // paper批次序列
+    GLBatch             backgroundBatch;        // 背景
+    
+    /* 绘图纹理 */
+    GLuint               backgroundTexture;      // 背景纹理
+    
+    // 着色器
+    PaperFlatLightShader paperFlatLightShader;  // 书页着色器
+    
+    
     GLMatrixStack       modelViewMatix;         // 模型矩阵
     GLMatrixStack       projectionMatrix;       // 投影矩阵
     GLGeometryTransform transformPipeline;      // 变换管线
@@ -56,8 +78,7 @@ typedef struct {
     float pinchSensitivity;                     // 捏合一页所需要的滑动距离
     float pinchSensitivity_;                    // 展开一页所需要的滑动距离
     
-    // 着色器
-    PaperFlatLightShader paperFlatLightShader;  // 书页着色器
+ 
     
     //
     NSInteger nextPageIndex;                    // 下一页的预测值

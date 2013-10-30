@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		792C936D181FC23A00D7BFE7 /* test.m in Sources */ = {isa = PBXBuildFile; fileRef = 792C936C181FC23A00D7BFE7 /* test.m */; };
+		79486A4C1820FE83009CD7C1 /* backgroundTile.png in Resources */ = {isa = PBXBuildFile; fileRef = 79486A4A1820FE83009CD7C1 /* backgroundTile.png */; };
+		79486A4D1820FE83009CD7C1 /* backgroundTile@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 79486A4B1820FE83009CD7C1 /* backgroundTile@2x.png */; };
+		79486A4F18210109009CD7C1 /* BackgroundFlatLight.vp in Resources */ = {isa = PBXBuildFile; fileRef = 79486A4E18210109009CD7C1 /* BackgroundFlatLight.vp */; };
+		79486A511821013C009CD7C1 /* BackgroundFlatLight.fp in Resources */ = {isa = PBXBuildFile; fileRef = 79486A501821013C009CD7C1 /* BackgroundFlatLight.fp */; };
 		7976171D181F61570093D43E /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7976171C181F61570093D43E /* GLKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		797658BC181F66C9006EB977 /* GLBatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 797658B7181F66C9006EB977 /* GLBatch.cpp */; };
 		797658BD181F66C9006EB977 /* GLShaderManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 797658B8181F66C9006EB977 /* GLShaderManager.cpp */; };
@@ -26,13 +30,17 @@
 		79A2B2601814D45C0091CBAA /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 79A2B25F1814D45C0091CBAA /* Default-568h@2x.png */; };
 		79A2B2671814D45C0091CBAA /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 79A2B2661814D45C0091CBAA /* ViewController.mm */; };
 		79E925671815024600707886 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 79E925661815024600707886 /* QuartzCore.framework */; };
-		DD25BB55181FEAC000158950 /* PaperFlatLight.vsh in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */; };
-		DD25BB56181FEAC000158950 /* PaperFlatLight.fsh in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */; };
+		DD25BB55181FEAC000158950 /* PaperFlatLight.vp in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB51181FEA9000158950 /* PaperFlatLight.vp */; };
+		DD25BB56181FEAC000158950 /* PaperFlatLight.fp in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB53181FEAA100158950 /* PaperFlatLight.fp */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		792C936B181FC23A00D7BFE7 /* test.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = test.h; sourceTree = "<group>"; };
 		792C936C181FC23A00D7BFE7 /* test.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test.m; sourceTree = "<group>"; };
+		79486A4A1820FE83009CD7C1 /* backgroundTile.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = backgroundTile.png; sourceTree = "<group>"; };
+		79486A4B1820FE83009CD7C1 /* backgroundTile@2x.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = "backgroundTile@2x.png"; sourceTree = "<group>"; };
+		79486A4E18210109009CD7C1 /* BackgroundFlatLight.vp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = BackgroundFlatLight.vp; sourceTree = "<group>"; };
+		79486A501821013C009CD7C1 /* BackgroundFlatLight.fp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = BackgroundFlatLight.fp; sourceTree = "<group>"; };
 		7976171C181F61570093D43E /* GLKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLKit.framework; path = System/Library/Frameworks/GLKit.framework; sourceTree = SDKROOT; };
 		797658B7181F66C9006EB977 /* GLBatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GLBatch.cpp; sourceTree = "<group>"; };
 		797658B8181F66C9006EB977 /* GLShaderManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GLShaderManager.cpp; sourceTree = "<group>"; };
@@ -68,8 +76,8 @@
 		79A2B2661814D45C0091CBAA /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
 		79A2B2781814D62A0091CBAA /* Define.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Define.h; sourceTree = "<group>"; };
 		79E925661815024600707886 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.vsh; sourceTree = "<group>"; };
-		DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.fsh; sourceTree = "<group>"; };
+		DD25BB51181FEA9000158950 /* PaperFlatLight.vp */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.vp; sourceTree = "<group>"; };
+		DD25BB53181FEAA100158950 /* PaperFlatLight.fp */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.fp; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -89,6 +97,15 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		79486A491820FC0D009CD7C1 /* Textures */ = {
+			isa = PBXGroup;
+			children = (
+				79486A4A1820FE83009CD7C1 /* backgroundTile.png */,
+				79486A4B1820FE83009CD7C1 /* backgroundTile@2x.png */,
+			);
+			path = Textures;
+			sourceTree = "<group>";
+		};
 		797658C4181F6F19006EB977 /* include */ = {
 			isa = PBXGroup;
 			children = (
@@ -156,6 +173,7 @@
 		79A2B2501814D45C0091CBAA /* Supporting Files */ = {
 			isa = PBXGroup;
 			children = (
+				79486A491820FC0D009CD7C1 /* Textures */,
 				DD25BB44181FE8AB00158950 /* Shaders */,
 				79A2B2511814D45C0091CBAA /* GLES_Paper-Info.plist */,
 				79A2B2521814D45C0091CBAA /* InfoPlist.strings */,
@@ -184,8 +202,10 @@
 		DD25BB44181FE8AB00158950 /* Shaders */ = {
 			isa = PBXGroup;
 			children = (
-				DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */,
-				DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */,
+				DD25BB51181FEA9000158950 /* PaperFlatLight.vp */,
+				DD25BB53181FEAA100158950 /* PaperFlatLight.fp */,
+				79486A4E18210109009CD7C1 /* BackgroundFlatLight.vp */,
+				79486A501821013C009CD7C1 /* BackgroundFlatLight.fp */,
 			);
 			path = Shaders;
 			sourceTree = "<group>";
@@ -241,12 +261,16 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				DD25BB55181FEAC000158950 /* PaperFlatLight.vsh in Resources */,
-				DD25BB56181FEAC000158950 /* PaperFlatLight.fsh in Resources */,
+				79486A511821013C009CD7C1 /* BackgroundFlatLight.fp in Resources */,
+				79486A4F18210109009CD7C1 /* BackgroundFlatLight.vp in Resources */,
+				DD25BB55181FEAC000158950 /* PaperFlatLight.vp in Resources */,
+				DD25BB56181FEAC000158950 /* PaperFlatLight.fp in Resources */,
 				79A2B2541814D45C0091CBAA /* InfoPlist.strings in Resources */,
 				79A2B25C1814D45C0091CBAA /* Default.png in Resources */,
 				79A2B25E1814D45C0091CBAA /* Default@2x.png in Resources */,
 				79A2B2601814D45C0091CBAA /* Default-568h@2x.png in Resources */,
+				79486A4C1820FE83009CD7C1 /* backgroundTile.png in Resources */,
+				79486A4D1820FE83009CD7C1 /* backgroundTile@2x.png in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
