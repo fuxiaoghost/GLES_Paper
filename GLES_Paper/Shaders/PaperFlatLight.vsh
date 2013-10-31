@@ -19,6 +19,7 @@ uniform mat3 normalMatrix;          // 法向量矩阵
 
 // 传递给片段着色器
 varying vec4 vVaryingColor;
+varying vec4 vVaryingVertex;
 
 void main(void){
     // 获取表面法线的视觉坐标
@@ -38,6 +39,9 @@ void main(void){
     // 环境光
     vec4 ambientColor = vec4(0.2,0.2,0.2,1.0);
     vVaryingColor += ambientColor;
+    
+    // 传递定点
+    vVaryingVertex = vVertex;
     
     // 变换
     gl_Position = mvpMatrix * vVertex;

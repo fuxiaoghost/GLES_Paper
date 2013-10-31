@@ -8,16 +8,22 @@
 
 precision mediump float;
 
-varying vec3 vVaryingNormal;
-varying vec3 vVaryingLight;
-varying vec2 vTextCoords;
-
+uniform mat4 mvMatrix;
+uniform vec3 vLightPosition;
 uniform vec4 ambientColor;
 uniform vec4 diffuseColor;
-uniform vec4 specularColor;
-uniform sampler2D colorMap;
+
+varying vec4 vVaryingVertex;
+varying vec3 vVaryingNormal;
 
 void main(void){
+
+    vec4 vPosition4 = mvMatrix * vVaryingVertex;
+    vec3 vPosition3 = vPosition4.xyz / vPosition4.w;
+    
+    vec3 vVaryingLight = normalize(vLightPosition - vPosition3);
+    
+    
     float diff = max(0.0,dot(normalize(vVaryingNormal),normalize(vVaryingLight)));
     
     // 漫射光
@@ -25,16 +31,4 @@ void main(void){
     
     // 环境光
     gl_FragColor += ambientColor;
-    
-    // 纹理
-    gl_FragColor *= texture2D(colorMap,vTextCoords);
-    
-    // 镜面光
-    vec3 vReflection = normalize(reflect(-normalize(vVaryingLight),normalize(vVaryingNormal)));
-    float spec = max(0.0,dot(normalize(vVaryingNormal),vReflection));
-    
-    if(diff != 0.0){
-        float fSpec = pow(spec,128.0);
-        gl_FragColor.rgb += vec3(fSpec,fSpec,fSpec);
-    }
 }
