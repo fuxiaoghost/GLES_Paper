@@ -11,13 +11,13 @@
 
 #define PAPER_FRAMESPERSECOND     60                // 刷新频率
 #define PAPER_MIN_ANGLE           (M_PI_4/6)            // 书页夹角/2
-#define PAPER_MAX_ANGLE           (M_PI_4-M_PI_4/4)              // (展开书页夹角 - 书页夹角)/2
-#define PAPER_Z_DISTANCE          (5.0f)           // 沿z轴距离
+#define PAPER_MAX_ANGLE           (M_PI_4)              // (展开书页夹角 - 书页夹角)/2
+#define PAPER_Z_DISTANCE          (-3.4f)           // 沿z轴距离
 #define PAPER_Z_MIN_DISTANCE      1.0f              // 最小z轴距离
 #define PAPER_Z_MAX_DISTANCE      (-10.0f)          // 最大z轴距离
 #define PAPER_PERSPECTIVE_NEAR    1.0f              // 透视场近端
 #define PAPER_PERSPECTIVE_FAR     1000.0f           // 透视场远端
-#define PAPER_PERSPECTIVE_FOVY    35.0f
+#define PAPER_PERSPECTIVE_FOVY    60.0f
 #define PAPER_ROTATION_RADIUS     0.3f              // 整体的大圆圈的旋转半径
 #define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE) // 沿x轴距离
 #define PAPER_RADIUS              (2 * PAPER_X_DISTANCE)
@@ -129,6 +129,7 @@
     // 刷新频率
     self.preferredFramesPerSecond = PAPER_FRAMESPERSECOND;
     
+    
     // debuglabel
     self.debugLabel = [[[UILabel alloc] initWithFrame:CGRectMake(20,20,100,30)] autorelease];
     self.debugLabel.backgroundColor = [UIColor clearColor];
@@ -232,11 +233,8 @@
 
 // 创建background的批次
 - (void) createBackgroundBatch{
-    
     // 创建纹理
-    
     backgroundBatch.Begin(GL_TRIANGLE_FAN, 4,1); // 四个顶点一个纹理
-    
     
     // 左下
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
@@ -321,11 +319,14 @@
     paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal");
     
     
-	paperFlatLightShader.lightColor = glGetUniformLocation(paperFlatLightShader.shaderId, "diffuseColor");
+	paperFlatLightShader.diffuseColor = glGetUniformLocation(paperFlatLightShader.shaderId, "diffuseColor");
+    paperFlatLightShader.ambientColor = glGetUniformLocation(paperFlatLightShader.ambientColor, "diffuseColor");
 	paperFlatLightShader.lightPosition = glGetUniformLocation(paperFlatLightShader.shaderId, "vLightPosition");
 	paperFlatLightShader.mvpMatrix = glGetUniformLocation(paperFlatLightShader.shaderId, "mvpMatrix");
 	paperFlatLightShader.mvMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "mvMatrix");
 	paperFlatLightShader.normalMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "normalMatrix");
+    paperFlatLightShader.radius = glGetUniformLocation(paperFlatLightShader.shaderId, "radius");
+    paperFlatLightShader.backHide = glGetUniformLocation(paperFlatLightShader.shaderId, "backHide");
     
     // background shader
     vp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
@@ -354,7 +355,7 @@
     
     // 传递数据给着色器
     GLfloat vAmbientColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };   // 环境光
-    GLfloat vDiffuseColor[] = { 0.5f, 0.5f, 0.5f, 1.0f };   // 散射光
+    GLfloat vDiffuseColor[] = { 0.5f, 0.54f, 0.54f, 1.0f };   // 散射光
     
     GLfloat vLightPos[] = {0.0f, 0.0f, -5.6f};
     glUniform4fv(backgroundFlatLightShader.ambientColor, 1, vAmbientColor);
@@ -385,7 +386,7 @@
         
         // 4、照相机机位
         paperPipeline.modelViewMatrix.PushMatrix();
-        paperPipeline.modelViewMatrix.Translate(0, 0, -5);
+        paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE);
         
         // 3、
         //paperPipeline.modelViewMatrix.Rotate(angel, 0, 1, 0);
@@ -453,14 +454,23 @@
         }
         
         // 启用着色器
-        GLfloat vLightColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-        GLfloat vLightPos[] = {0.2f, 0.2f, 1.0f};
+        GLfloat vDiffuseColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        GLfloat vAmbientColor[] = { 0.2, 0.2, 0.2, 1.0f };
+        GLfloat vLightPos[] = {0.0f, 0.0f, -1.0f};
         glUseProgram(paperFlatLightShader.shaderId);
-		glUniform4fv(paperFlatLightShader.lightColor, 1, vLightColor);
+		glUniform4fv(paperFlatLightShader.diffuseColor, 1, vDiffuseColor);
+        glUniform4fv(paperFlatLightShader.ambientColor, 1, vAmbientColor);
 		glUniform3fv(paperFlatLightShader.lightPosition, 1, vLightPos);
 		glUniformMatrix4fv(paperFlatLightShader.mvpMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewProjectionMatrix());
 		glUniformMatrix4fv(paperFlatLightShader.mvMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewMatrix());
 		glUniformMatrix3fv(paperFlatLightShader.normalMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetNormalMatrix());
+        glUniform1f(paperFlatLightShader.radius, 0.08);
+        if (i == 0 || i == self.imagePathArray.count - 1) {
+            glUniform1i(paperFlatLightShader.backHide, 0);
+        }else{
+            glUniform1i(paperFlatLightShader.backHide, 1);
+        }
+        
         paperBatchs[i].Draw();
         
         paperPipeline.modelViewMatrix.PopMatrix();

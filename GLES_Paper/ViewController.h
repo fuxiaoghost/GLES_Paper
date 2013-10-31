@@ -28,11 +28,14 @@ typedef enum {
 
 // 书页着色器相关参数
 typedef struct {
-    GLint lightColor;
+    GLint diffuseColor;
+    GLint ambientColor;
     GLint lightPosition;
     GLint mvpMatrix;
     GLint mvMatrix;
     GLint normalMatrix;
+    GLint backHide;
+    GLint radius;
     GLint shaderId;
 }PaperFlatLightShader;
 
