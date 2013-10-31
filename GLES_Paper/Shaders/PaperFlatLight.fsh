@@ -7,11 +7,20 @@
 //
 precision mediump float;
 
+uniform bool backHidden;
 
 varying vec4 vVaryingColor;
 varying vec4 vVaryingVertex;
+varying float varyingDiff;
 
 void main(void){
+    if (backHidden) {
+        if (varyingDiff < -0.1) {
+            discard;
+        }
+    }
+    
+    
     float y = vVaryingVertex.y;
     float z = vVaryingVertex.z;
     float radius = 0.1;

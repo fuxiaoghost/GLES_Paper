@@ -20,6 +20,7 @@ uniform mat3 normalMatrix;          // 法向量矩阵
 // 传递给片段着色器
 varying vec4 vVaryingColor;
 varying vec4 vVaryingVertex;
+varying float varyingDiff;
 
 void main(void){
     // 获取表面法线的视觉坐标
@@ -30,7 +31,8 @@ void main(void){
     // 获取到光源的向量
     vec3 vLightDir = normalize(vLightPosition - vPosition3);
     // 从点乘积得到漫反射强度
-    float diff = max(0.0,dot(vEyeNormal,vLightDir));
+    varyingDiff = dot(vEyeNormal,vLightDir);
+    float diff = max(0.0,varyingDiff);
     
     // 用强度乘以漫反射颜色，将alpha设置为1.0
     vVaryingColor.xyz = diff * diffuseColor.xyz;
