@@ -25,7 +25,7 @@ varying vec2 vVaryingTexCoord;
 void main(void){
     vVaryingTexCoord = vTexCoord;
     
-    diff = dot(normalMatrix * vNormal,vec3(0.0,0.0,1.0));
+    diff = dot(normalize(normalMatrix * vNormal),vec3(0.0,0.0,1.0));
     v_NDotL = max(0.0, diff);
     
     vVaryingVertex = vVertex;

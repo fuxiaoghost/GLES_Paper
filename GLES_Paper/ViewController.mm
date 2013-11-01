@@ -303,7 +303,7 @@
     [self initShaders];
     
     // 准备纹理
-    [self loadTextureWithId:&paperTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"Plain" ofType:@"png"]];
+    [self loadTextureWithId:&paperTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"paperTexture" ofType:@"png"]];
     
     // 准备渲染图形的批次
     [self createPaperBatchArray];       // papers
@@ -469,14 +469,34 @@
         }else{
             glUniform1i(paperFlatLightShader.backHide, 1);
         }
-        if (i % 2 == 0) {
-            glUniform1f(paperFlatLightShader.flippingPageEdge, -1.0);
-        }else{
-            glUniform1f(paperFlatLightShader.flippingPageEdge, 1.0);
+        glUniform1f(paperFlatLightShader.flippingPageEdge, 0);
+      
+        if (isMoving) {
+            if (i == self.pageIndex * 2 + 1) {
+                glUniform1f(paperFlatLightShader.flippingPageEdge,pageRemainder/moveSensitivity);
+            }else if(i == self.pageIndex * 2 + 2){
+                glUniform1f(paperFlatLightShader.flippingPageEdge, pageRemainder/moveSensitivity);
+            }
         }
-        glUniform1f(paperFlatLightShader.rightHalfFlipping, 0.0);
+        
+//        if (isMoving) {
+//            if (i % 2 == 0) {
+//                
+//            }else{
+//                glUniform1f(paperFlatLightShader.flippingPageEdge,  pageRemainder/moveSensitivity); // 渐变
+//            }
+//        }
+        
+        /*
+         if (nextPageIndex > self.pageIndex) {
+         glUniform1f(paperFlatLightShader.rightHalfFlipping, 1.0); // 左滑
+         }else if(nextPageIndex < self.pageIndex){
+         glUniform1f(paperFlatLightShader.rightHalfFlipping, 0.0); // 右滑
+         }
+         */
+        
         glUniform3fv(paperFlatLightShader.highlightColor, 1, vDiffuseColor);
-        glUniform1f(paperFlatLightShader.highlightAlpha, 0.4);
+        glUniform1f(paperFlatLightShader.highlightAlpha, 0); // 渐变
         glUniform1f(paperFlatLightShader.colorMap, 0);
         
         // 纹理
@@ -539,7 +559,7 @@
     // 当前页面的值
     self.pageIndex = currentIndex;
     
-    float pageRemainder = 0;
+  
     if (move > 0) {
         pageRemainder = move - moveSensitivity * ((int)(move/moveSensitivity));
         if (pageRemainder > moveSensitivity/2) {

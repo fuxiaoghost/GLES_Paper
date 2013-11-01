@@ -108,6 +108,7 @@ typedef struct {
     CFAbsoluteTime currentTime;
     float currentX;
     float acceleration;
+    float pageRemainder;
     
     // 停表
     CStopWatch stopWatch;
