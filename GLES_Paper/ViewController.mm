@@ -470,12 +470,19 @@
             glUniform1i(paperFlatLightShader.backHide, 1);
         }
         glUniform1f(paperFlatLightShader.flippingPageEdge, 0);
-      
+        glUniform1f(paperFlatLightShader.rightHalfFlipping, 0.0);
+        
         if (isMoving) {
-            if (i == self.pageIndex * 2 + 1) {
-                glUniform1f(paperFlatLightShader.flippingPageEdge,pageRemainder/moveSensitivity);
-            }else if(i == self.pageIndex * 2 + 2){
-                glUniform1f(paperFlatLightShader.flippingPageEdge, pageRemainder/moveSensitivity);
+            if (nextPageIndex > self.pageIndex) {
+                if (i == self.pageIndex * 2 + 1) {
+                    glUniform1f(paperFlatLightShader.flippingPageEdge,pageRemainder/moveSensitivity);
+                }
+                glUniform1f(paperFlatLightShader.rightHalfFlipping, 1.0); // 右滑
+            }else if(nextPageIndex < self.pageIndex){
+                if (i == self.pageIndex * 2 - 1) {
+                    glUniform1f(paperFlatLightShader.flippingPageEdge,1-pageRemainder/moveSensitivity);
+                }
+                
             }
         }
         
@@ -491,7 +498,7 @@
          if (nextPageIndex > self.pageIndex) {
          glUniform1f(paperFlatLightShader.rightHalfFlipping, 1.0); // 左滑
          }else if(nextPageIndex < self.pageIndex){
-         glUniform1f(paperFlatLightShader.rightHalfFlipping, 0.0); // 右滑
+         
          }
          */
         
