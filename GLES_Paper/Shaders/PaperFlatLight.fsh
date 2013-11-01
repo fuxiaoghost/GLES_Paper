@@ -51,15 +51,13 @@ void main(void){
     lowp float leftHalf = step(vVaryingTexCoord.x, 0.5);
     lowp float rightHalf = step(0.5, vVaryingTexCoord.x);
     
-    lowp float occludedPageShadow = 1.0
-    - rightHalf * step(0.0, u_FlippingPageEdge) * mix(0.0,0.45,u_FlippingPageEdge)
-    - leftHalf * step(u_FlippingPageEdge,0.0) * mix(0.0, 0.45, -u_FlippingPageEdge);
+    lowp float occludedPageShadow = 1.0 - rightHalf * step(0.0, u_FlippingPageEdge) * mix(0.0,0.45,u_FlippingPageEdge) - leftHalf * step(u_FlippingPageEdge,0.0) * mix(0.0, 0.45, -u_FlippingPageEdge);
     
     lowp float flippingPageShadow = mix(mix(0.75,1.0,v_NDotL), 1.0, 2.0 * abs(vVaryingTexCoord.x - 0.5));
     lowp float flippingHalf = mix(leftHalf, rightHalf, u_RightHalfFlipping);
     
     computedColor.xyz *= mix(occludedPageShadow, flippingPageShadow, flippingHalf);
-    computedColor.rgb = mix(computedColor.rgb, u_HighlightColor，u_HighlightAlpha);
+    computedColor.rgb = mix(computedColor.rgb,u_HighlightColor,u_HighlightAlpha);
     
     gl_FragColor = computedColor;
 }

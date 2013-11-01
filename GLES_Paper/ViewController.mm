@@ -191,7 +191,7 @@
     for (int i = 0; i < self.imagePathArray.count; i++) {
         if (i % 2 == 0) {
             // 奇数位翻转
-            paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4);
+            paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4,1);
             // 左半边三角形
             paperBatchs[i].MultiTexCoord2f(0, 0.5, 1.0);
             paperBatchs[i].Normal3f(1, 0.0f, 0.0f);
@@ -211,7 +211,7 @@
             paperBatchs[i].Vertex3f(0.0f, -1.0f, 1.0f);
             paperBatchs[i].End();
         }else{
-            paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4);
+            paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4,1);
             // 右半边三角形
             paperBatchs[i].MultiTexCoord2f(0, 0.5, 1.0);
             paperBatchs[i].Normal3f(-1.0f, 0.0f, 0.0f);
@@ -319,7 +319,7 @@
     // paper shader
     const char *vp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
     const char *fp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
-    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp, 2, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal");
+    paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp, 3, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal",GLT_ATTRIBUTE_TEXTURE0,"vTexCoord");
     
 	paperFlatLightShader.mvpMatrix = glGetUniformLocation(paperFlatLightShader.shaderId, "mvpMatrix");
 	paperFlatLightShader.mvMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "mvMatrix");
