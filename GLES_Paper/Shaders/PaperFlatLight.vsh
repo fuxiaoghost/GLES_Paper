@@ -9,19 +9,26 @@
 // 输入 顶点位置和法向量
 attribute vec4 vVertex;
 attribute vec3 vNormal;
+attribute vec2 vTexCoord;
 
 // 设置每个批次
 uniform mat4 mvpMatrix;             // 投影变换矩阵
 uniform mat3 normalMatrix;          // 法向量矩阵
+uniform mat4 mvMatrix;              // 模型矩阵
 
 // 传递给片段着色器
+varying float v_NDotL;
 varying vec4 vVaryingVertex;
-varying vec3 vVaryingNormal;
+varying float diff;
+varying vec2 vVaryingTexCoord;
 
 void main(void){
+    vVaryingTexCoord = vTexCoord;
     
-    vVaryingVertex = vVertex;
-    vVaryingNormal = normalMatrix * vNormal;
+    diff = dot(mvMatrix * vNormal,vec3(0,0,1));
+    v_NDotL = max(0.0, diff);
+    
+    vVaryingVertex = mvMatrix * vVertex;
     
     // 变换
     gl_Position = mvpMatrix * vVertex;

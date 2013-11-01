@@ -9,28 +9,31 @@ precision mediump float;
 
 uniform int backHide;
 uniform float radius;
-uniform vec4 diffuseColor;          // 漫射光颜色
-uniform vec4 ambientColor;
-uniform vec3 vLightPosition;        // 光源位置
-uniform mat4 mvMatrix;              // 模型矩阵
+
+uniform lowp float u_FlippingPageEdge;
+
+uniform lowp float u_RightHalfFlipping;
+
+uniform vec3 u_HighlightColor;
+uniform float u_HighlightAlpha;
+uniform sampler2D colorMap;
+
 
 varying vec4 vVaryingVertex;
-varying vec3 vVaryingNormal;
+varying float diff;
+varying mediump float v_NDotL;
+varying vec2 vVaryingTexCoord;
 
 void main(void){
-    vec4 vPosition4 = mvMatrix * vVaryingVertex;
-    vec3 vPosition3 = vPosition4.xyz / vPosition4.w;
-    vec3 vVaryingLight = normalize(vLightPosition - vPosition3);
-    
-    float diff = dot(normalize(vVaryingNormal),normalize(vVaryingLight));
+
+    // 背面不渲染
     if (backHide == 1) {
         if (diff < -0.2) {
             discard;
         }
     }
     
-    diff = max(0.0,diff);
-    
+    // 圆角
     float y = vVaryingVertex.y;
     float z = vVaryingVertex.z;
     if (y > 1.0 - radius && z > 1.0 - radius) {
@@ -43,10 +46,20 @@ void main(void){
         }
     }
     
+    lowp vec4 computedColor = texture2D(colorMap,vVaryingTexCoord);
     
-    // 漫射光
-    gl_FragColor = diff * diffuseColor;
+    lowp float leftHalf = step(vVaryingTexCoord.x, 0.5);
+    lowp float rightHalf = step(0.5, vVaryingTexCoord.x);
     
-    // 环境光
-    gl_FragColor += ambientColor;
+    lowp float occludedPageShadow = 1.0
+    - rightHalf * step(0.0, u_FlippingPageEdge) * mix(0.0,0.45,u_FlippingPageEdge)
+    - leftHalf * step(u_FlippingPageEdge,0.0) * mix(0.0, 0.45, -u_FlippingPageEdge);
+    
+    lowp float flippingPageShadow = mix(mix(0.75,1.0,v_NDotL), 1.0, 2.0 * abs(vVaryingTexCoord.x - 0.5));
+    lowp float flippingHalf = mix(leftHalf, rightHalf, u_RightHalfFlipping);
+    
+    computedColor.xyz *= mix(occludedPageShadow, flippingPageShadow, flippingHalf);
+    computedColor.rgb = mix(computedColor.rgb, u_HighlightColor，u_HighlightAlpha);
+    
+    gl_FragColor = computedColor;
 }
