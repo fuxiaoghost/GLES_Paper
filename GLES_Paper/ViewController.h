@@ -33,11 +33,10 @@ typedef struct {
     GLint normalMatrix;
     GLint backHide;
     GLint radius;
-    GLint flippingPageEdge;
-    GLint rightHalfFlipping;
-    GLint highlightColor;
-    GLint highlightAlpha;
     GLint colorMap;
+    GLint lightPosition;         
+    GLint lightColor;
+    GLint leftHalf;
     GLint shaderId;
 }PaperFlatLightShader;
 

@@ -31,6 +31,7 @@
 		79E925671815024600707886 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 79E925661815024600707886 /* QuartzCore.framework */; };
 		DD25BB55181FEAC000158950 /* PaperFlatLight.vsh in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */; };
 		DD25BB56181FEAC000158950 /* PaperFlatLight.fsh in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */; };
+		DD6C2DA31824012A00B51778 /* sex.png in Resources */ = {isa = PBXBuildFile; fileRef = DD6C2DA21824012A00B51778 /* sex.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -76,6 +77,7 @@
 		79E925661815024600707886 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.vsh; sourceTree = "<group>"; };
 		DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.fsh; sourceTree = "<group>"; };
+		DD6C2DA21824012A00B51778 /* sex.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = sex.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,6 +100,7 @@
 		79486A491820FC0D009CD7C1 /* Textures */ = {
 			isa = PBXGroup;
 			children = (
+				DD6C2DA21824012A00B51778 /* sex.png */,
 				79C1D8CF1823B38A00F4C789 /* paperTexture.png */,
 			);
 			path = Textures;
@@ -262,6 +265,7 @@
 				79486A4F18210109009CD7C1 /* BackgroundFlatLight.vsh in Resources */,
 				DD25BB55181FEAC000158950 /* PaperFlatLight.vsh in Resources */,
 				DD25BB56181FEAC000158950 /* PaperFlatLight.fsh in Resources */,
+				DD6C2DA31824012A00B51778 /* sex.png in Resources */,
 				79A2B2541814D45C0091CBAA /* InfoPlist.strings in Resources */,
 				79A2B25C1814D45C0091CBAA /* Default.png in Resources */,
 				79A2B25E1814D45C0091CBAA /* Default@2x.png in Resources */,

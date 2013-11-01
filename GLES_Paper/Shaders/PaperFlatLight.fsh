@@ -9,20 +9,14 @@ precision mediump float;
 
 uniform int backHide;
 uniform float radius;
-
-uniform lowp float u_FlippingPageEdge;
-
-uniform lowp float u_RightHalfFlipping;
-
-uniform vec3 u_HighlightColor;
-uniform float u_HighlightAlpha;
 uniform sampler2D colorMap;
-
+uniform int leftHalf;
 
 varying vec4 vVaryingVertex;
 varying float diff;
-varying mediump float v_NDotL;
 varying vec2 vVaryingTexCoord;
+varying vec4 vVaryingColor;
+varying float zDistance;
 
 void main(void){
 
@@ -45,19 +39,22 @@ void main(void){
             discard;
         }
     }
+    lowp vec4 textureColor = texture2D(colorMap,vVaryingTexCoord);
     
-    lowp vec4 computedColor = texture2D(colorMap,vVaryingTexCoord);
+    if (leftHalf == 1) {
+        // 左侧页加渐变灰
+        lowp vec4 leftCoverColor = vec4(1.0,1.0,1.0,1.0);
+        leftCoverColor.rgb = mix(vec3(0.0,0.0,0.0),vec3(0.1,0.1,0.1),vVaryingTexCoord.s);
+        gl_FragColor = vVaryingColor - leftCoverColor;
+    }else{
+        gl_FragColor = vVaryingColor;
+    }
     
-    lowp float leftHalf = step(vVaryingTexCoord.x, 0.5);
-    lowp float rightHalf = step(0.5, vVaryingTexCoord.x);
+    // 环境光
+    gl_FragColor.rgb += vec3(0.2,0.2,0.2);
     
-    lowp float occludedPageShadow = 1.0 - rightHalf * step(0.0, u_FlippingPageEdge) * mix(0.0,0.45,u_FlippingPageEdge) - leftHalf * step(u_FlippingPageEdge,0.0) * mix(0.0, 0.45, -u_FlippingPageEdge);
+    // 随Z轴变化
+    gl_FragColor.rgb *= mix(1.0,0.45,zDistance);
     
-    lowp float flippingPageShadow = mix(mix(0.75,1.0,v_NDotL), 1.0, 2.0 * abs(vVaryingTexCoord.x - 0.5));
-    lowp float flippingHalf = mix(leftHalf, rightHalf, u_RightHalfFlipping);
-    
-    computedColor.xyz *= mix(occludedPageShadow, flippingPageShadow, flippingHalf);
-    computedColor.rgb = mix(computedColor.rgb,u_HighlightColor,u_HighlightAlpha);
-    
-    gl_FragColor = computedColor;
+    gl_FragColor *= textureColor;
 }

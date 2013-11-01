@@ -221,11 +221,11 @@
             paperBatchs[i].Normal3f(-1.0f, 0.0f, 0.0f);
             paperBatchs[i].Vertex3f(0, -1.0f, 0);
             
-            paperBatchs[i].MultiTexCoord2f(0, 1, 1);
+            paperBatchs[i].MultiTexCoord2f(0.0, 1.0, 1.0);
             paperBatchs[i].Normal3f(-1.0f, 0.0f, 0.0f);
             paperBatchs[i].Vertex3f(0.0f, 1.0f, 1.0f);
             
-            paperBatchs[i].MultiTexCoord2f(0, 1, 0);
+            paperBatchs[i].MultiTexCoord2f(0.0, 1.0, 0.0);
             paperBatchs[i].Normal3f(-1.0f, 0.0f, 0.0f);
             paperBatchs[i].Vertex3f(0.0f, -1.0f, 1.0f);
             paperBatchs[i].End();
@@ -282,7 +282,8 @@
     CGContextRef context = CGBitmapContextCreate(imageData, width, height, 8, 4 * width, colorSpace, kCGImageAlphaPremultipliedLast | kCGBitmapByteOrder32Big);
     CGColorSpaceRelease(colorSpace);
     CGContextClearRect(context, CGRectMake(0, 0, width, height));
-    CGContextTranslateCTM(context, 0, height - height);
+    CGContextTranslateCTM(context, 0, height);
+    CGContextScaleCTM(context, 1.0, -1.0);
     CGContextDrawImage(context, CGRectMake(0, 0, width, height), image.CGImage);
     
     glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, width, height, 0, GL_RGBA,GL_UNSIGNED_BYTE, imageData);
@@ -303,7 +304,7 @@
     [self initShaders];
     
     // 准备纹理
-    [self loadTextureWithId:&paperTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"paperTexture" ofType:@"png"]];
+    [self loadTextureWithId:&paperTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"sex" ofType:@"png"]];
     
     // 准备渲染图形的批次
     [self createPaperBatchArray];       // papers
@@ -321,15 +322,15 @@
     const char *fp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
     paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp, 3, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal",GLT_ATTRIBUTE_TEXTURE0,"vTexCoord");
     
+
 	paperFlatLightShader.mvpMatrix = glGetUniformLocation(paperFlatLightShader.shaderId, "mvpMatrix");
 	paperFlatLightShader.mvMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "mvMatrix");
 	paperFlatLightShader.normalMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "normalMatrix");
     paperFlatLightShader.radius = glGetUniformLocation(paperFlatLightShader.shaderId, "radius");
     paperFlatLightShader.backHide = glGetUniformLocation(paperFlatLightShader.shaderId, "backHide");
-    paperFlatLightShader.flippingPageEdge = glGetUniformLocation(paperFlatLightShader.shaderId, "u_FlippingPageEdge");
-    paperFlatLightShader.rightHalfFlipping = glGetUniformLocation(paperFlatLightShader.shaderId, "u_RightHalfFlipping");
-    paperFlatLightShader.highlightColor = glGetUniformLocation(paperFlatLightShader.shaderId, "u_HighlightColor");
-    paperFlatLightShader.highlightAlpha = glGetUniformLocation(paperFlatLightShader.shaderId, "u_HighlightAlpha");
+    paperFlatLightShader.lightColor = glGetUniformLocation(paperFlatLightShader.shaderId, "lightColor");
+    paperFlatLightShader.lightPosition = glGetUniformLocation(paperFlatLightShader.shaderId, "lightPosition");
+    paperFlatLightShader.leftHalf = glGetUniformLocation(paperFlatLightShader.shaderId, "leftHalf");
     paperFlatLightShader.colorMap = glGetUniformLocation(paperFlatLightShader.shaderId, "colorMap");
     
     // background shader
@@ -392,6 +393,7 @@
         paperPipeline.modelViewMatrix.PushMatrix();
         paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE);
         
+    
         // 3、
         //paperPipeline.modelViewMatrix.Rotate(angel, 0, 1, 0);
         
@@ -459,6 +461,7 @@
         
         // 启用着色器
         GLfloat vDiffuseColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+        GLfloat vLightPosition[] = { 0.0, 0.0, 5.0};
         glUseProgram(paperFlatLightShader.shaderId);
 		glUniformMatrix4fv(paperFlatLightShader.mvpMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewProjectionMatrix());
 		glUniformMatrix4fv(paperFlatLightShader.mvMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewMatrix());
@@ -469,41 +472,14 @@
         }else{
             glUniform1i(paperFlatLightShader.backHide, 1);
         }
-        glUniform1f(paperFlatLightShader.flippingPageEdge, 0);
-        glUniform1f(paperFlatLightShader.rightHalfFlipping, 0.0);
-        
-        if (isMoving) {
-            if (nextPageIndex > self.pageIndex) {
-                if (i == self.pageIndex * 2 + 1) {
-                    glUniform1f(paperFlatLightShader.flippingPageEdge,pageRemainder/moveSensitivity);
-                }
-                glUniform1f(paperFlatLightShader.rightHalfFlipping, 1.0); // 右滑
-            }else if(nextPageIndex < self.pageIndex){
-                if (i == self.pageIndex * 2 - 1) {
-                    glUniform1f(paperFlatLightShader.flippingPageEdge,1-pageRemainder/moveSensitivity);
-                }
-                
-            }
+        glUniform4fv(paperFlatLightShader.lightColor, 1, vDiffuseColor);
+        glUniform3fv(paperFlatLightShader.lightPosition, 1, vLightPosition);
+        if (i % 2 == 0) {
+            glUniform1i(paperFlatLightShader.leftHalf, 1);
+        }else{
+            glUniform1i(paperFlatLightShader.leftHalf, 0);
         }
-        
-//        if (isMoving) {
-//            if (i % 2 == 0) {
-//                
-//            }else{
-//                glUniform1f(paperFlatLightShader.flippingPageEdge,  pageRemainder/moveSensitivity); // 渐变
-//            }
-//        }
-        
-        /*
-         if (nextPageIndex > self.pageIndex) {
-         glUniform1f(paperFlatLightShader.rightHalfFlipping, 1.0); // 左滑
-         }else if(nextPageIndex < self.pageIndex){
-         
-         }
-         */
-        
-        glUniform3fv(paperFlatLightShader.highlightColor, 1, vDiffuseColor);
-        glUniform1f(paperFlatLightShader.highlightAlpha, 0); // 渐变
+       
         glUniform1f(paperFlatLightShader.colorMap, 0);
         
         // 纹理
