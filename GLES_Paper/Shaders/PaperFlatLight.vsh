@@ -36,7 +36,7 @@ void main(void){
     
     vVaryingColor = lightColor * diff2;
     vec4 zVertex = mvMatrix * vec4(0,0,0,1);
-    zDistance = abs(zVertex.z) - 3.4;
+    zDistance = abs(zVertex.z);
     
     vVaryingVertex = vVertex;
     // 变换

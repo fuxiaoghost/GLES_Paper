@@ -45,16 +45,16 @@ void main(void){
         // 左侧页加渐变灰
         lowp vec4 leftCoverColor = vec4(1.0,1.0,1.0,1.0);
         leftCoverColor.rgb = mix(vec3(0.0,0.0,0.0),vec3(0.1,0.1,0.1),vVaryingTexCoord.s);
-        gl_FragColor = vVaryingColor - leftCoverColor;
+        gl_FragColor = vVaryingColor - leftCoverColor * mix(1.0,0.6,zDistance/5.0);
     }else{
         gl_FragColor = vVaryingColor;
     }
     
     // 环境光
-    gl_FragColor.rgb += vec3(0.2,0.2,0.2);
+    gl_FragColor.rgb += vec3(0.3,0.3,0.3);
     
     // 随Z轴变化
-    gl_FragColor.rgb *= mix(1.0,0.45,zDistance);
+    gl_FragColor.rgb *= mix(1.0,0.6,zDistance/5.0);
     
     gl_FragColor *= textureColor;
 }
