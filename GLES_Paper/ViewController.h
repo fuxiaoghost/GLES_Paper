@@ -37,6 +37,9 @@ typedef struct {
     GLint lightPosition;                        // 光线位置
     GLint lightColor;                           // 光线颜色
     GLint leftHalf;                             // 左边书页1，右边书页0
+    GLint fovy;                                 // 视场角
+    GLint z0;
+    GLint z1;
     GLint shaderId;                             // 着色器ID
 }PaperFlatLightShader;
 
@@ -66,7 +69,7 @@ typedef struct {
     NSInteger nextPageIndex;                    // 下一页的预测值
     float x = 0;                                // 翻页时活动页移动的距离
     BOOL needReset = NO;                        // 是否需要重置
-    CFAbsoluteTime currentTime;                 // 记录当前时间
+    CFAbsoluteTime currentTime = 0.0;           // 记录当前时间
     float currentX = 0;                         // 还原时记录x的当前值
     float acceleration;                         // 加速度
     float pageRemainder = 0;                    // 翻页时的进度
@@ -87,6 +90,15 @@ typedef struct {
     float theta = 0;                            // 页夹角
     float beta = 0;                             // 旋转角
     float zMove = 0;                            // z轴移动距离
+    float currentTheta = 0;
+    float currentBeta = 0;
+    float currentZMove = 0;
+    BOOL needUnfold = NO;                       // 是否需要展开
+    BOOL needNormal = NO;                       // 是否需要还原
+    CFAbsoluteTime currentTime = 0.0;           // 记录当前时间
+    float accelerationTheta;                    // 加速度
+    float accelerationBeta;                     //
+    float accelerationZ;
 }PinchMove;
 
 @interface ViewController : GLKViewController{
