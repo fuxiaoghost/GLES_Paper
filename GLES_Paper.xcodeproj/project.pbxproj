@@ -157,6 +157,7 @@
 		79A2B24F1814D45C0091CBAA /* GLES_Paper */ = {
 			isa = PBXGroup;
 			children = (
+				DD1BA777182603F300E23218 /* ShaderModel */,
 				79A2B2781814D62A0091CBAA /* Define.h */,
 				79A2B2581814D45C0091CBAA /* AppDelegate.h */,
 				79A2B2591814D45C0091CBAA /* AppDelegate.mm */,
@@ -197,6 +198,13 @@
 				797658BB181F66C9006EB977 /* math3d.cpp */,
 			);
 			path = GLTools;
+			sourceTree = "<group>";
+		};
+		DD1BA777182603F300E23218 /* ShaderModel */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = ShaderModel;
 			sourceTree = "<group>";
 		};
 		DD25BB44181FE8AB00158950 /* Shaders */ = {

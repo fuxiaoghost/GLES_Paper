@@ -8,17 +8,19 @@
 
 attribute vec4 vVertex;
 attribute vec3 vNormal;
+attribute vec2 vTexCoord;
 
 uniform mat4 mvpMatrix;
 uniform mat3 normalMatrix;
 
 varying vec4 vVaryingVertex;
 varying vec3 vVaryingNormal;
-
+varying vec2 vVaryingTexCoord;
 
 void main(void){
     vVaryingVertex = vVertex;
     vVaryingNormal = normalMatrix * vNormal;
+    vVaryingTexCoord = vTexCoord;
     
     gl_Position = mvpMatrix * vVertex;
 }

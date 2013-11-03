@@ -22,6 +22,10 @@
 #define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE) // 沿x轴距离
 #define PAPER_RADIUS              (2 * PAPER_X_DISTANCE)
 
+static const GLKVector3 kLightPosition = { -0.5, 1.0, 0.0 };
+static const GLKVector3 kLightLookAt = { 0.0, 0.0, -15.0 };
+static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.5, 0, 0.5, 0.5, 0.5, 1.0);
+
 @interface ViewController () {
     
 }
@@ -36,8 +40,6 @@
 
 @implementation ViewController
 
-
-
 - (void)dealloc{
     [self tearDownGL];
     
@@ -48,7 +50,6 @@
     [_context release];
     self.imagePathArray = nil;
     self.debugLabel = nil;
-    
     [super dealloc];
 }
 
@@ -243,18 +244,22 @@
     // 左下
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
     backgroundBatch.Vertex3f(-1.0f, -1.0f, 0.0f);
+    backgroundBatch.MultiTexCoord2f(0, 0.0f, 0.0f);
     
     // 左上
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
     backgroundBatch.Vertex3f(-1.0f, 1.0f, 0.0f);
+    backgroundBatch.MultiTexCoord2f(0, 0.0f, 1.0f);
     
     // 右上
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
     backgroundBatch.Vertex3f(1.0f, 1.0f, 0.0f);
+    backgroundBatch.MultiTexCoord2f(0, 1.0f, 1.0f);
 
     // 右下
     backgroundBatch.Normal3f(0.0f, 0.0f, 1.0f);
     backgroundBatch.Vertex3f(1.0f, -1.0f, 0.0f);
+    backgroundBatch.MultiTexCoord2f(0, 1.0f, 0.0f);
     
     backgroundBatch.End();
 }
@@ -311,9 +316,6 @@
     // 准备渲染图形的批次
     [self createPaperBatchArray];       // papers
     [self createBackgroundBatch];
-    
-    // 启用深度测试
-    glEnable(GL_DEPTH_TEST);
 }
 
 // 构造需要的着色器
@@ -341,7 +343,7 @@
     // background shader
     vp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
     fp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
-    backgroundFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp,2,GLT_ATTRIBUTE_VERTEX,"vVertex",GLT_ATTRIBUTE_NORMAL,"vNormal");
+    backgroundFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp,3,GLT_ATTRIBUTE_VERTEX,"vVertex",GLT_ATTRIBUTE_NORMAL,"vNormal",GLT_ATTRIBUTE_TEXTURE0,"vTexCoord");
     
     backgroundFlatLightShader.mvpMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "mvpMatrix");
     backgroundFlatLightShader.mvMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "mvMatrix");
@@ -349,6 +351,7 @@
     backgroundFlatLightShader.lightPosition = glGetUniformLocation(backgroundFlatLightShader.shaderId, "vLightPosition");
     backgroundFlatLightShader.ambientColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "ambientColor");
     backgroundFlatLightShader.diffuseColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "diffuseColor");
+    backgroundFlatLightShader.colorMap = glGetUniformLocation(backgroundFlatLightShader.shaderId, "colorMap");
 }
 
 
@@ -357,6 +360,9 @@
 
 // 绘制背景
 - (void) drawBackground{
+    // 启用深度测试
+    glEnable(GL_DEPTH_TEST);
+    
     backgroundPipeline.modelViewMatrix.PushMatrix();
     backgroundPipeline.modelViewMatrix.Translate(0, 0, -7);
     
@@ -374,13 +380,20 @@
     glUniformMatrix4fv(backgroundFlatLightShader.mvpMatrix, 1, GL_FALSE, backgroundPipeline.transformPipeline.GetModelViewProjectionMatrix());
     glUniformMatrix4fv(backgroundFlatLightShader.mvMatrix, 1, GL_FALSE, backgroundPipeline.transformPipeline.GetModelViewMatrix());
     glUniformMatrix3fv(backgroundFlatLightShader.normalMatrix, 1, GL_FALSE, backgroundPipeline.transformPipeline.GetNormalMatrix());
+    
+    //glUniform1f(backgroundFlatLightShader.colorMap, 0);
+    
+    // 纹理
+    //glBindTexture(GL_TEXTURE_2D, self.varianceShadowBuffer.texture);
+    
     backgroundBatch.Draw();
     
     backgroundPipeline.modelViewMatrix.PopMatrix();
 }
 
 // 绘制所有的书页
-- (void) drawPapers{
+- (void) drawPapersLookAt:(M3DMatrix44f)lookAt shadow:(BOOL)shadow{
+
     angel = angel - 0.01;
     if (angel < - M_PI * 2) {
         angel = 0;
@@ -395,10 +408,10 @@
     for (int i = 0; i < self.imagePathArray.count ; i++) {
         
         // 4、照相机机位
-        paperPipeline.modelViewMatrix.PushMatrix();
+        paperPipeline.modelViewMatrix.PushMatrix(lookAt);
         paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + pinchMove.zMove);
         
-    
+        
         // 3、
         //paperPipeline.modelViewMatrix.Rotate(angel, 0, 1, 0);
         
@@ -453,7 +466,6 @@
             }
         }
         
-    
         
         paperPipeline.modelViewMatrix.Translate(xDistance, 0, 0);
         
@@ -464,38 +476,57 @@
             paperPipeline.modelViewMatrix.Rotate(-PAPER_MIN_ANGLE + pinchMove.theta, 0, 1, 0);
         }
         
-        // 启用着色器
-        GLfloat vDiffuseColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
-        GLfloat vLightPosition[] = { 0.0, 0.0, 5.0};
-        glUseProgram(paperFlatLightShader.shaderId);
-		glUniformMatrix4fv(paperFlatLightShader.mvpMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewProjectionMatrix());
-		glUniformMatrix4fv(paperFlatLightShader.mvMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewMatrix());
-		glUniformMatrix3fv(paperFlatLightShader.normalMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetNormalMatrix());
-        glUniform1f(paperFlatLightShader.radius, 0.06);
-        if (i == 0 || i == self.imagePathArray.count - 1) {
-            glUniform1i(paperFlatLightShader.backHide, 0);
+        if (shadow) {
+            // set the correct shader
+           
         }else{
-            glUniform1i(paperFlatLightShader.backHide, 1);
+            // 启用着色器
+            GLfloat vDiffuseColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
+            GLfloat vLightPosition[] = { 0.0, 0.0, 5.0};
+            glUseProgram(paperFlatLightShader.shaderId);
+            glUniformMatrix4fv(paperFlatLightShader.mvpMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewProjectionMatrix());
+            glUniformMatrix4fv(paperFlatLightShader.mvMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewMatrix());
+            glUniformMatrix3fv(paperFlatLightShader.normalMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetNormalMatrix());
+            glUniform1f(paperFlatLightShader.radius, 0.06);
+            if (i == 0 || i == self.imagePathArray.count - 1) {
+                glUniform1i(paperFlatLightShader.backHide, 0);
+            }else{
+                glUniform1i(paperFlatLightShader.backHide, 1);
+            }
+            glUniform4fv(paperFlatLightShader.lightColor, 1, vDiffuseColor);
+            glUniform3fv(paperFlatLightShader.lightPosition, 1, vLightPosition);
+            if (i % 2 == 0) {
+                glUniform1i(paperFlatLightShader.leftHalf, 1);
+            }else{
+                glUniform1i(paperFlatLightShader.leftHalf, 0);
+            }
+            glUniform1f(paperFlatLightShader.fovy, m3dDegToRad(PAPER_PERSPECTIVE_FOVY));
+            glUniform1f(paperFlatLightShader.z0, (-PAPER_Z_DISTANCE) - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY)));
+            glUniform1f(paperFlatLightShader.z1, 5.0 - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY)));
+            glUniform1f(paperFlatLightShader.colorMap, 0);
+            
+            // 纹理
+            glBindTexture(GL_TEXTURE_2D, paperTexture);
+            
+            paperBatchs[i].Draw();
         }
-        glUniform4fv(paperFlatLightShader.lightColor, 1, vDiffuseColor);
-        glUniform3fv(paperFlatLightShader.lightPosition, 1, vLightPosition);
-        if (i % 2 == 0) {
-            glUniform1i(paperFlatLightShader.leftHalf, 1);
-        }else{
-            glUniform1i(paperFlatLightShader.leftHalf, 0);
-        }
-        glUniform1f(paperFlatLightShader.fovy, m3dDegToRad(PAPER_PERSPECTIVE_FOVY));
-        glUniform1f(paperFlatLightShader.z0, (-PAPER_Z_DISTANCE) - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY)));
-        glUniform1f(paperFlatLightShader.z1, 5.0 - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY)));
-        glUniform1f(paperFlatLightShader.colorMap, 0);
-        
-        // 纹理
-        glBindTexture(GL_TEXTURE_2D, paperTexture);
-        
-        paperBatchs[i].Draw();
         
         paperPipeline.modelViewMatrix.PopMatrix();
     }
+}
+- (void) drawPapers{
+    // 启用深度测试
+    glEnable(GL_DEPTH_TEST);
+    
+    //return;
+    
+    M3DMatrix44f lookAt;
+    m3dLoadIdentity44(lookAt);
+    [self drawPapersLookAt:lookAt shadow:NO];
+}
+
+- (void) drawShadows{
+    
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
@@ -516,8 +547,14 @@
     // 启用深度测试
     glEnable(GL_DEPTH_TEST);
     
+    // 启用颜色抖动
+    glEnable(GL_DITHER);
+    
     /************************准备开整**************************/
-   
+    
+    // 在缓冲区绘制阴影
+    [self drawShadows];
+    
     // 绘制背景
     [self drawBackground];
     
@@ -624,6 +661,7 @@
         CFTimeInterval timeOffset = stopWatch.GetElapsedSeconds() - pinchMove.currentTime;
         if (timeOffset > time) {
             self.paperStatus = PaperUnfold;
+            panGesture.enabled = NO;
             pinchMove.needUnfold = NO;
             pinchMove.currentTime = 0.0;
             pinchMove.beta = -(PAPER_MAX_ANGLE - PAPER_MIN_ANGLE);
@@ -660,6 +698,7 @@
         }
         CFTimeInterval timeOffset = stopWatch.GetElapsedSeconds() - pinchMove.currentTime;
         if (timeOffset > time) {
+            panGesture.enabled = YES;
             self.paperStatus = PaperNormal;
             pinchMove.needNormal = NO;
             pinchMove.currentTime = 0.0;
