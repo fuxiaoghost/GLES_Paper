@@ -97,6 +97,10 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
 
 -(void) changeSize:(CGSize)size{
     frameSize = CGSizeMake(size.width, size.height);
+    // 准备数据
+    paningMove.moveSensitivity = frameSize.width/2;
+    pinchMove.pinchSensitivity =  frameSize.width/2;
+    
 	// Prevent a divide by zero
 	if(size.height == 0)
 		size.height = 1;
@@ -121,9 +125,7 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     [super viewDidLoad];
     self.paperStatus = PaperNormal;
     
-    // 准备数据
-    paningMove.moveSensitivity = self.view.frame.size.width;
-    pinchMove.pinchSensitivity = paningMove.moveSensitivity;
+    
     
     // EAGL上下文
     self.context = [[[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2] autorelease];
@@ -148,13 +150,13 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
     view.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
-    view.drawableMultisample = GLKViewDrawableMultisampleNone;
+    view.drawableMultisample = GLKViewDrawableMultisample4X;
     
     // GL初始化配置
     [self setupGL];
     
     // 设置Size
-    if (INTERFACE_LANDSCAPELEFT || INTERFACE_LANDSCAPERIGHT) {
+    if (([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationLandscapeLeft) || ([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationLandscapeRight)) {
         CGSize size = CGSizeMake(SCREEN_HEIGHT,SCREEN_WIDTH);
         [self changeSize:size];
         paningMove.moveSensitivity = size.width;
@@ -928,13 +930,9 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
         CGSize size = CGSizeMake(SCREEN_WIDTH, SCREEN_HEIGHT);
         
         [self changeSize:size];
-        paningMove.moveSensitivity = size.width;
-        pinchMove.pinchSensitivity = paningMove.moveSensitivity;
     }else{
         CGSize size = CGSizeMake(SCREEN_HEIGHT,SCREEN_WIDTH);
         [self changeSize:size];
-        paningMove.moveSensitivity = size.width;
-        pinchMove.pinchSensitivity = paningMove.moveSensitivity;
     }
     
 }
