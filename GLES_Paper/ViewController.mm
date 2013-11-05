@@ -9,7 +9,7 @@
 #import "ViewController.h"
 #import "Define.h"
 
-#define PAPER_FRAMESPERSECOND     30                // 刷新频率
+#define PAPER_FRAMESPERSECOND     60                // 刷新频率
 #define PAPER_MIN_ANGLE           (M_PI_4/6)            // 书页夹角/2
 #define PAPER_MAX_ANGLE           (M_PI_4)              // (展开书页夹角 - 书页夹角)/2
 #define PAPER_Z_DISTANCE          (-3.0f)           // 沿z轴距离
@@ -122,7 +122,7 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     
     // 准备数据
     paningMove.moveSensitivity = self.view.frame.size.width;
-    pinchMove.pinchSensitivity = paningMove.moveSensitivity/3.0f;
+    pinchMove.pinchSensitivity = paningMove.moveSensitivity;
     
     // EAGL上下文
     self.context = [[[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2] autorelease];
@@ -153,7 +153,18 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     [self setupGL];
     
     // 设置Size
-    [self changeSize:CGSizeMake(1024, 768)];
+    if (INTERFACE_LANDSCAPELEFT || INTERFACE_LANDSCAPERIGHT) {
+        CGSize size = CGSizeMake(SCREEN_HEIGHT,SCREEN_WIDTH);
+        [self changeSize:size];
+        paningMove.moveSensitivity = size.width;
+        pinchMove.pinchSensitivity = paningMove.moveSensitivity;
+    }else{
+        CGSize size = CGSizeMake(SCREEN_WIDTH, SCREEN_HEIGHT);
+        
+        [self changeSize:size];
+        paningMove.moveSensitivity = size.width;
+        pinchMove.pinchSensitivity = paningMove.moveSensitivity;
+    }
     
     // 添加手势
     [self addGesture];
@@ -534,10 +545,10 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     [self resetViewsTimes:0.3];
     
     // Unfold
-    [self unfoldViewsTimes:0.5];
+    [self unfoldViewsTimes:0.3];
     
     // normal
-    [self normalViewsTimes:0.5];
+    [self normalViewsTimes:0.3];
     
     // 清理画布
     glClearColor(0.65f, 0.65f, 0.65f, 1.0f);
@@ -915,12 +926,12 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
         
         [self changeSize:size];
         paningMove.moveSensitivity = size.width;
-        pinchMove.pinchSensitivity = paningMove.moveSensitivity/3.0f;
+        pinchMove.pinchSensitivity = paningMove.moveSensitivity;
     }else{
         CGSize size = CGSizeMake(SCREEN_HEIGHT,SCREEN_WIDTH);
         [self changeSize:size];
         paningMove.moveSensitivity = size.width;
-        pinchMove.pinchSensitivity = paningMove.moveSensitivity/3.0f;
+        pinchMove.pinchSensitivity = paningMove.moveSensitivity;
     }
     
 }
