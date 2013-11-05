@@ -32,7 +32,6 @@ typedef struct {
     GLint mvMatrix;                             // 模型矩阵
     GLint normalMatrix;                         // 法线矩阵
     GLint backHide;                             // 是否渲染背面
-    GLint radius;                               // 圆角半径
     GLint colorMap;                             // 纹理ID
     GLint lightPosition;                        // 光线位置
     GLint lightColor;                           // 光线颜色
@@ -40,6 +39,8 @@ typedef struct {
     GLint fovy;                                 // 视场角
     GLint z0;
     GLint z1;
+    GLint radiusZ;
+    GLint radiusY;
     GLint shaderId;                             // 着色器ID
 }PaperFlatLightShader;
 
@@ -130,6 +131,8 @@ typedef struct {
     PinchMove pinchMove;                        // 捏合动作
     
     CStopWatch stopWatch;                       // 停表
+    
+    CGSize frameSize;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;

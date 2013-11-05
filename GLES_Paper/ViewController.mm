@@ -96,6 +96,7 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
 }
 
 -(void) changeSize:(CGSize)size{
+    frameSize = CGSizeMake(size.width, size.height);
 	// Prevent a divide by zero
 	if(size.height == 0)
 		size.height = 1;
@@ -341,7 +342,8 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
 	paperFlatLightShader.mvpMatrix = glGetUniformLocation(paperFlatLightShader.shaderId, "mvpMatrix");
 	paperFlatLightShader.mvMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "mvMatrix");
 	paperFlatLightShader.normalMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "normalMatrix");
-    paperFlatLightShader.radius = glGetUniformLocation(paperFlatLightShader.shaderId, "radius");
+    paperFlatLightShader.radiusZ = glGetUniformLocation(paperFlatLightShader.shaderId, "radiusZ");
+    paperFlatLightShader.radiusY = glGetUniformLocation(paperFlatLightShader.shaderId, "radiusY");
     paperFlatLightShader.backHide = glGetUniformLocation(paperFlatLightShader.shaderId, "backHide");
     paperFlatLightShader.lightColor = glGetUniformLocation(paperFlatLightShader.shaderId, "lightColor");
     paperFlatLightShader.lightPosition = glGetUniformLocation(paperFlatLightShader.shaderId, "lightPosition");
@@ -498,7 +500,8 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
             glUniformMatrix4fv(paperFlatLightShader.mvpMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewProjectionMatrix());
             glUniformMatrix4fv(paperFlatLightShader.mvMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewMatrix());
             glUniformMatrix3fv(paperFlatLightShader.normalMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetNormalMatrix());
-            glUniform1f(paperFlatLightShader.radius, 0.06);
+            glUniform1f(paperFlatLightShader.radiusZ, 0.06);
+            glUniform1f(paperFlatLightShader.radiusY, 0.06 * frameSize.width/frameSize.height);
             if (i == 0 || i == self.imagePathArray.count - 1) {
                 glUniform1i(paperFlatLightShader.backHide, 0);
             }else{
