@@ -57,6 +57,12 @@ typedef struct {
     GLint shaderId;                             // 着色器ID
 }BackgroundFlatLightShader;
 
+// 阴影深度着色器
+typedef struct {
+    GLint mvpMatrix;                            // 投影矩阵
+    GLint shaderId;                             // 着色器ID
+}ShadowDepthShader;
+
 // 变换管线
 typedef struct {
     GLMatrixStack modelViewMatrix;              // 模型矩阵
@@ -113,10 +119,15 @@ typedef struct {
     
     /* 绘图纹理 */
     GLuint   paperTexture;                      // 书页纹理
+    GLuint   shadowTexture;                     // 书页阴影纹理
     
-    // 着色器
+    /* FBO 帧缓冲对象 */
+    GLuint   shadowBuffer;                      // 绘制阴影的帧缓冲区
+    
+    /* 着色器 */
     PaperFlatLightShader paperFlatLightShader;  // 书页着色器
     BackgroundFlatLightShader backgroundFlatLightShader;    // 背景着色器
+    ShadowDepthShader shadowDepthShader;            // 阴影深度
     
     /* 变换管线 */
     TransformPipeline backgroundPipeline;       // 背景的变换管线

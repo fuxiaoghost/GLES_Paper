@@ -22,9 +22,7 @@
 #define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE) // 沿x轴距离
 #define PAPER_RADIUS              (2 * PAPER_X_DISTANCE)
 
-static const GLKVector3 kLightPosition = { -0.5, 1.0, 0.0 };
-static const GLKVector3 kLightLookAt = { 0.0, 0.0, -15.0 };
-static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 0, 0, 0.5, 0, 0.5, 0.5, 0.5, 1.0);
+
 
 @interface ViewController () {
     
@@ -70,21 +68,45 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
 }
 
 - (void)tearDownGL{
-    // 清理GL的资源
+    // clear gl 
     [EAGLContext setCurrentContext:self.context];
     
-    // 删除着色器
+    // delete shaders
     glDeleteProgram(paperFlatLightShader.shaderId);
     glDeleteProgram(backgroundFlatLightShader.shaderId);
+    glDeleteProgram(shadowDepthShader.shaderId);
     
-    // 删除纹理
+    // delete textures
     glDeleteTextures(1, &paperTexture);
+    glDeleteTextures(1, &shadowTexture);
     
-    // 删除图形批次
+    // delete FBO
+    glDeleteFramebuffers(1,&shadowBuffer);
+    
+    // delete batchs
     if (paperBatchs != NULL) {
         delete [] paperBatchs;
         paperBatchs = NULL;
     }
+}
+
+
+- (void)setupGL{
+    [EAGLContext setCurrentContext:self.context];
+    
+    // 初始化着色器
+    shaderManager.InitializeStockShaders();
+    [self initShaders];
+    
+    /* 准备纹理 */
+    // 图片纹理
+    [self loadTextureWithId:&paperTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"sex" ofType:@"png"]];
+    // 阴影纹理和FBO
+    [self createShadowTexture];
+    
+    // 准备渲染图形的批次
+    [self createPaperBatchArray];       // papers
+    [self createBackgroundBatch];
 }
 
 - (id) initWithImagePaths:(NSArray *)paths{
@@ -126,7 +148,6 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     self.paperStatus = PaperNormal;
     
     
-    
     // EAGL上下文
     self.context = [[[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2] autorelease];
     if (!self.context) {
@@ -150,7 +171,7 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
     view.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
-    view.drawableMultisample = GLKViewDrawableMultisample4X;
+    view.drawableMultisample = GLKViewDrawableMultisampleNone;
     
     // GL初始化配置
     [self setupGL];
@@ -316,21 +337,38 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     [texData release];
 }
 
-
-- (void)setupGL{
-    [EAGLContext setCurrentContext:self.context];
+// 构造阴影纹理
+- (void) createShadowTexture{
+    glGenTextures(1, &shadowTexture);
     
-    // 初始化着色器
-    shaderManager.InitializeStockShaders();
-    [self initShaders];
+    glBindTexture(GL_TEXTURE_2D, shadowTexture);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
     
-    // 准备纹理
-    [self loadTextureWithId:&paperTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"sex" ofType:@"png"]];
+    // we do not want to wrap, this will cause incorrect shadows to be rendered
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
     
-    // 准备渲染图形的批次
-    [self createPaperBatchArray];       // papers
-    [self createBackgroundBatch];
+    // create or reuse the depth texture
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG_EXT, frameSize.width, frameSize.height, 0, GL_RG_EXT, GL_HALF_FLOAT_OES, 0);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    
+    // unbind it for now
+    glBindTexture(GL_TEXTURE_2D, 0);
+    
+    // create a framebuffer object to attach the depth texture to
+    glGenFramebuffers(1, &shadowBuffer);
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer);
+    
+    // attach the depth texture to the render buffer
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadowTexture, 0);
+    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+    NSAssert(status == GL_FRAMEBUFFER_COMPLETE, @"error creating shadow FBO, status code 0x%4X", status);
+    
+    // unbind the FBO
+    glBindFramebuffer(GL_FRAMEBUFFER, 0);
 }
+
 
 // 构造需要的着色器
 - (void) initShaders{
@@ -367,6 +405,9 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     backgroundFlatLightShader.ambientColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "ambientColor");
     backgroundFlatLightShader.diffuseColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "diffuseColor");
     backgroundFlatLightShader.colorMap = glGetUniformLocation(backgroundFlatLightShader.shaderId, "colorMap");
+    
+    // shadowdepth shader
+    shadowDepthShader.mvpMatrix = glGetUniformLocation(shadowDepthShader.shaderId, "mvpMatrix");
 }
 
 
@@ -492,10 +533,12 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
         }
         
         if (shadow) {
-            // set the correct shader
-           
+            // 启用阴影深度着色器
+            glUseProgram(shadowDepthShader.shaderId);
+            glUniformMatrix4fv(shadowDepthShader.mvpMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewProjectionMatrix());
+            paperBatchs[i].Draw();
         }else{
-            // 启用着色器
+            // 启用书页光照着色器
             GLfloat vDiffuseColor[] = { 1.0f, 1.0f, 1.0f, 1.0f };
             GLfloat vLightPosition[] = { 0.0, 0.0, 5.0};
             glUseProgram(paperFlatLightShader.shaderId);
@@ -541,8 +584,70 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
     [self drawPapersLookAt:lookAt shadow:NO];
 }
 
+// 绘制书页投影
 - (void) drawShadows{
+    // 将视点移动到光源位置，绘制投影
+    glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer);
+    glViewport(0, 0, frameSize.width, frameSize.height);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
+    // create the projection matrix from the cameras view
+    static const GLKVector3 kLightPosition = {0.0, 1.0, 0.0 };      // 观察点
+    static const GLKVector3 kLightLookAt = { 0.0, 0.0, -0.5 };     // 中心点
+    GLKMatrix4 cameraViewMatrix = GLKMatrix4MakeLookAt(kLightPosition.x, kLightPosition.y, kLightPosition.z, kLightLookAt.x, kLightLookAt.y, kLightLookAt.z, 0, 1, 0);
+    [self drawPapersLookAt:cameraViewMatrix.m shadow:YES];
+ 
+    
+    /* 对阴影进行动态模糊 */ 
+    static const GLfloat vertices[] = {-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0};
+    static const GLfloat textureCoords[] = {0, 0, 1, 0, 0, 1, 1, 1};
+    
+    // get the current bound FBO and viewport size
+    GLint oldFBO;
+    GLint viewport[4];
+    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFBO);
+    glGetIntegerv(GL_VIEWPORT, viewport);
+    
+    // switch to the blur shader
+    glUseProgram(self.shader.program);
+    
+    // set the viewport to use the whole pixel buffer
+    glViewport(0, 0, self.size.width, self.size.height);
+    
+    // enable the vertex attributes
+    glEnableVertexAttribArray(BlurShaderPositionAttribute);
+    glVertexAttribPointer(BlurShaderPositionAttribute, 3, GL_FLOAT, GL_FALSE, 0, vertices);
+    glEnableVertexAttribArray(BlurShaderTexCoordAttribute);
+    glVertexAttribPointer(BlurShaderTexCoordAttribute, 2, GL_FLOAT, GL_FALSE, 0, textureCoords);
+    
+    // bind the texture to blur
+    glActiveTexture(GL_TEXTURE0);
+    glBindTexture(GL_TEXTURE_2D, texture);
+    glUniform1i(self.shader.sampler, 0);
+    
+    // set the filter weights and offset steps
+    glUniform1fv(self.shader.filterOffsets, 3, kFilterOffsets);
+    glUniform1fv(self.shader.filterWeights, 3, kFilterWeights);
+    glUniform2f(self.shader.pixelStep, 0, 1.0 / self.size.height);
+    
+    // blur in the horizontal direction into the bounce buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, _bounceFBO);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    // now blur in the vertical direction back into the original buffer
+    glBindFramebuffer(GL_FRAMEBUFFER, oldFBO);
+    glClear(GL_COLOR_BUFFER_BIT);
+    glBindTexture(GL_TEXTURE_2D, _bounceTex);
+    glUniform2f(self.shader.pixelStep, 1.0 / self.size.width, 0);
+    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
+    
+    // cleanup
+    glDisableVertexAttribArray(BlurShaderPositionAttribute);
+    glDisableVertexAttribArray(BlurShaderTexCoordAttribute);
+    glUseProgram(0);
+    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
+    glBindFramebuffer(GL_FRAMEBUFFER, oldFBO);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
@@ -787,50 +892,13 @@ static const GLKMatrix4 biasMatrix = GLKMatrix4Make(0.5, 0, 0, 0, 0, 0.5, 0, 0, 
 #pragma mark GestureReceive
 // 点击
 - (void) tapGestureReceive:(UITapGestureRecognizer *)recoginzer{
-    if (self.paperStatus == PaperUnfold || self.paperStatus == PaperFold) {
-        
-//        [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveLinear animations:^{
-//            [self pinchChange:pinchSensitivity/4];
-//        } completion:^(BOOL finished) {
-//            [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveLinear animations:^{
-//                [self pinchChange:pinchSensitivity/2];
-//            } completion:^(BOOL finished) {
-//                [UIView animateWithDuration:0.1 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveLinear animations:^{
-//                    [self pinchChange:pinchSensitivity* 3/4];
-//                } completion:^(BOOL finished) {
-//                    [UIView animateWithDuration:0.3 delay:0 options:UIViewAnimationOptionBeginFromCurrentState|UIViewAnimationOptionCurveLinear animations:^{
-//                        [self resetViews];
-//                    } completion:^(BOOL finished) {
-//                        
-//                    }];
-//                }];
-//            }];
-//        }];
+    if (self.paperStatus == PaperUnfold) {
+        pinchMove.needNormal = YES;
     }else if(self.paperStatus == PaperNormal){
-//        [self unfoldAnimated];
+        pinchMove.needUnfold = YES;
     }
 }
 
-- (void) preloadImages{
-//    float move = [self touchLengthMoveTo:endTouch];
-//    float pageRemainder = 0;
-//    if (move > 0) {
-//        pageRemainder = move - moveSensitivity * ((int)(move/moveSensitivity));
-//    }else if(move < 0){
-//        pageRemainder = (-move) + moveSensitivity * ((int)(move/moveSensitivity));
-//    }
-//    if (pageRemainder > moveSensitivity/2) {
-//        if (move > 0) {
-//            if (self.pageIndex + 1 < self.imageArray.count) {
-//                self.pageIndex++;
-//            }
-//        }else{
-//            if (self.pageIndex - 1 >= 0 ) {
-//                self.pageIndex--;
-//            }
-//        }
-//    }
-}
 
 // 滑动
 - (void)paningGestureReceive:(UIPanGestureRecognizer *)recoginzer{
