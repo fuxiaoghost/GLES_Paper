@@ -29,11 +29,12 @@
 		79A2B2671814D45C0091CBAA /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 79A2B2661814D45C0091CBAA /* ViewController.mm */; };
 		79C1D8D01823B38A00F4C789 /* paperTexture.png in Resources */ = {isa = PBXBuildFile; fileRef = 79C1D8CF1823B38A00F4C789 /* paperTexture.png */; };
 		79E925671815024600707886 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 79E925661815024600707886 /* QuartzCore.framework */; };
-		79F89786182B8A2D00B67296 /* ShadowDepth.fsh in Resources */ = {isa = PBXBuildFile; fileRef = 79F89784182B8A2C00B67296 /* ShadowDepth.fsh */; };
-		79F89787182B8A2D00B67296 /* ShadowDepth.vsh in Resources */ = {isa = PBXBuildFile; fileRef = 79F89785182B8A2D00B67296 /* ShadowDepth.vsh */; };
 		DD25BB55181FEAC000158950 /* PaperFlatLight.vsh in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */; };
 		DD25BB56181FEAC000158950 /* PaperFlatLight.fsh in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */; };
 		DD6C2DA31824012A00B51778 /* sex.png in Resources */ = {isa = PBXBuildFile; fileRef = DD6C2DA21824012A00B51778 /* sex.png */; };
+		DD735FF8182E51EC00D57B4E /* PaperShadow.vsh in Resources */ = {isa = PBXBuildFile; fileRef = DD735FF7182E51EC00D57B4E /* PaperShadow.vsh */; };
+		DD735FFA182E51FA00D57B4E /* PaperShadow.fsh in Resources */ = {isa = PBXBuildFile; fileRef = DD735FF9182E51FA00D57B4E /* PaperShadow.fsh */; };
+		DD735FFC182E6C4E00D57B4E /* shadow.png in Resources */ = {isa = PBXBuildFile; fileRef = DD735FFB182E6C4E00D57B4E /* shadow.png */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -77,13 +78,12 @@
 		79A2B2781814D62A0091CBAA /* Define.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Define.h; sourceTree = "<group>"; };
 		79C1D8CF1823B38A00F4C789 /* paperTexture.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = paperTexture.png; sourceTree = "<group>"; };
 		79E925661815024600707886 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
-		79F89784182B8A2C00B67296 /* ShadowDepth.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = ShadowDepth.fsh; sourceTree = "<group>"; };
-		79F89785182B8A2D00B67296 /* ShadowDepth.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = ShadowDepth.vsh; sourceTree = "<group>"; };
-		79F89788182B8DFE00B67296 /* ShadowBlur.vsh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = ShadowBlur.vsh; sourceTree = "<group>"; };
-		79F89789182B8E1200B67296 /* ShadowBlur.fsh */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.glsl; path = ShadowBlur.fsh; sourceTree = "<group>"; };
 		DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.vsh; sourceTree = "<group>"; };
 		DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.fsh; sourceTree = "<group>"; };
 		DD6C2DA21824012A00B51778 /* sex.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = sex.png; sourceTree = "<group>"; };
+		DD735FF7182E51EC00D57B4E /* PaperShadow.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = PaperShadow.vsh; sourceTree = "<group>"; };
+		DD735FF9182E51FA00D57B4E /* PaperShadow.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = PaperShadow.fsh; sourceTree = "<group>"; };
+		DD735FFB182E6C4E00D57B4E /* shadow.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = shadow.png; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -106,6 +106,7 @@
 		79486A491820FC0D009CD7C1 /* Textures */ = {
 			isa = PBXGroup;
 			children = (
+				DD735FFB182E6C4E00D57B4E /* shadow.png */,
 				DD6C2DA21824012A00B51778 /* sex.png */,
 				79C1D8CF1823B38A00F4C789 /* paperTexture.png */,
 			);
@@ -216,14 +217,12 @@
 		DD25BB44181FE8AB00158950 /* Shaders */ = {
 			isa = PBXGroup;
 			children = (
-				79F89788182B8DFE00B67296 /* ShadowBlur.vsh */,
-				79F89789182B8E1200B67296 /* ShadowBlur.fsh */,
-				79F89784182B8A2C00B67296 /* ShadowDepth.fsh */,
-				79F89785182B8A2D00B67296 /* ShadowDepth.vsh */,
 				DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */,
 				DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */,
 				79486A4E18210109009CD7C1 /* BackgroundFlatLight.vsh */,
 				79486A501821013C009CD7C1 /* BackgroundFlatLight.fsh */,
+				DD735FF7182E51EC00D57B4E /* PaperShadow.vsh */,
+				DD735FF9182E51FA00D57B4E /* PaperShadow.fsh */,
 			);
 			path = Shaders;
 			sourceTree = "<group>";
@@ -279,8 +278,8 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				79F89786182B8A2D00B67296 /* ShadowDepth.fsh in Resources */,
-				79F89787182B8A2D00B67296 /* ShadowDepth.vsh in Resources */,
+				DD735FF8182E51EC00D57B4E /* PaperShadow.vsh in Resources */,
+				DD735FFA182E51FA00D57B4E /* PaperShadow.fsh in Resources */,
 				79486A511821013C009CD7C1 /* BackgroundFlatLight.fsh in Resources */,
 				79486A4F18210109009CD7C1 /* BackgroundFlatLight.vsh in Resources */,
 				DD25BB55181FEAC000158950 /* PaperFlatLight.vsh in Resources */,
@@ -289,6 +288,7 @@
 				79A2B2541814D45C0091CBAA /* InfoPlist.strings in Resources */,
 				79A2B25C1814D45C0091CBAA /* Default.png in Resources */,
 				79A2B25E1814D45C0091CBAA /* Default@2x.png in Resources */,
+				DD735FFC182E6C4E00D57B4E /* shadow.png in Resources */,
 				79A2B2601814D45C0091CBAA /* Default-568h@2x.png in Resources */,
 				79C1D8D01823B38A00F4C789 /* paperTexture.png in Resources */,
 			);

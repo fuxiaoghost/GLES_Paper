@@ -44,24 +44,24 @@ typedef struct {
     GLint shaderId;                             // 着色器ID
 }PaperFlatLightShader;
 
+typedef struct {
+    GLint mvpMatrix;                            // 投影矩阵
+    GLint mvMatrix;                             // 模型矩阵
+    GLint colorMap;                             // 纹理ID
+    GLint shaderId;
+}PaperShadowShader;
+
 // 背景着色器
 typedef struct {
     GLint mvpMatrix;                            // 投影矩阵
     GLint mvMatrix;                             // 模型矩阵
+    GLint mvsMatrix;                            // 影子的投影矩阵
     GLint normalMatrix;                         // 法线矩阵
     GLint lightPosition;                        // 光源位置
-    GLint ambientColor;                         // 环境光
-    GLint diffuseColor;                         // 漫射光
-    GLint specularColor;                        // 镜面光
-    GLint colorMap;                             // 纹理ID
+    GLint lightColor;                           // 光
+    GLint shadowMap;                            // 阴影纹理ID
     GLint shaderId;                             // 着色器ID
 }BackgroundFlatLightShader;
-
-// 阴影深度着色器
-typedef struct {
-    GLint mvpMatrix;                            // 投影矩阵
-    GLint shaderId;                             // 着色器ID
-}ShadowDepthShader;
 
 // 变换管线
 typedef struct {
@@ -85,6 +85,10 @@ typedef struct {
     CGPoint endTouch;                           // 记录单手滑动结束位置
     NSInteger startPageIndex;                   // 滑动开始前当前页
     float moveSensitivity;                      // 翻一页所需要的滑动距离
+    float endVelocity;                          // 滑动结束时的速度
+    float endAcceleration;                      // 滑动结束时的加速度
+    float endMove;                              // 滑动结束时已经移动的距离
+    BOOL  needMove;                             // 是否需要继续滑动
 }PaningMove;
 
 // 捏合动作
@@ -106,6 +110,7 @@ typedef struct {
     float accelerationTheta;                    // 加速度
     float accelerationBeta;                     //
     float accelerationZ;
+    
 }PinchMove;
 
 @interface ViewController : GLKViewController{
@@ -119,15 +124,13 @@ typedef struct {
     
     /* 绘图纹理 */
     GLuint   paperTexture;                      // 书页纹理
-    GLuint   shadowTexture;                     // 书页阴影纹理
-    
-    /* FBO 帧缓冲对象 */
-    GLuint   shadowBuffer;                      // 绘制阴影的帧缓冲区
+    GLuint   shadowTexture;
     
     /* 着色器 */
-    PaperFlatLightShader paperFlatLightShader;  // 书页着色器
+    PaperFlatLightShader paperFlatLightShader;              // 书页着色器
     BackgroundFlatLightShader backgroundFlatLightShader;    // 背景着色器
-    ShadowDepthShader shadowDepthShader;            // 阴影深度
+    PaperShadowShader paperShadowShader;                    // 书页阴影
+
     
     /* 变换管线 */
     TransformPipeline backgroundPipeline;       // 背景的变换管线

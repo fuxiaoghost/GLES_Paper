@@ -6,34 +6,39 @@
 //  Copyright (c) 2013年 Dawn. All rights reserved.
 //
 
-precision mediump float;
+varying lowp  vec4 colorVarying;
+varying highp vec4 shadowCoord;
 
-uniform mat4 mvMatrix;
-uniform vec3 vLightPosition;
-uniform vec4 ambientColor;
-uniform vec4 diffuseColor;
-uniform sampler2D colorMap;
+uniform sampler2D shadowMap;
 
-varying vec4 vVaryingVertex;
-varying vec3 vVaryingNormal;
-varying vec2 vVaryingTexCoord;
+const highp float kMinVariance = 0.00002;
+const lowp  float kShadowAmount = 0.4;
 
-void main(void){
+lowp float chebyshevUpperBound(highp vec3 coords)
+{
+	highp vec2 moments = texture2D(shadowMap, coords.xy).rg;
+    
+	// If the fragment is in front of the occluder, then it is fully lit.
+    if (coords.z <= moments.r)
+        return 1.0;
+    
+	// The fragment is either in shadow or penumbra.
+    // Calculate the variance and clamp to a min value
+    // to avoid self shadowing artifacts.
+	highp float variance = moments.g - (moments.r * moments.r);
+	variance = max(variance, kMinVariance);
+    
+    // Calculate the probabilistic upper bound.
+	highp float d = coords.z - moments.r;
+    lowp float p_max = variance / (variance + d*d);
+    
+	return p_max;
+}
 
-    vec4 vPosition4 = mvMatrix * vVaryingVertex;
-    vec3 vPosition3 = vPosition4.xyz / vPosition4.w;
+void main()
+{
+    highp vec3 postWCoord = shadowCoord.xyz / shadowCoord.w;
+    lowp float pShadow = chebyshevUpperBound(postWCoord);
     
-    vec3 vVaryingLight = normalize(vLightPosition - vPosition3);
-    
-    
-    float diff = max(0.0,dot(normalize(vVaryingNormal),normalize(vVaryingLight)));
-    
-    // 漫射光
-    gl_FragColor = diff * diffuseColor;
-    
-    // 环境光
-    gl_FragColor += ambientColor;
-    
-    //lowp vec4 textureColor = texture2D(colorMap,vVaryingTexCoord);
-    //gl_FragColor *= textureColor;
+    gl_FragColor = colorVarying * (1.0 - kShadowAmount + kShadowAmount * pShadow);
 }

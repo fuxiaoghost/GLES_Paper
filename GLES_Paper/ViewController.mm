@@ -74,14 +74,9 @@
     // delete shaders
     glDeleteProgram(paperFlatLightShader.shaderId);
     glDeleteProgram(backgroundFlatLightShader.shaderId);
-    glDeleteProgram(shadowDepthShader.shaderId);
     
     // delete textures
     glDeleteTextures(1, &paperTexture);
-    glDeleteTextures(1, &shadowTexture);
-    
-    // delete FBO
-    glDeleteFramebuffers(1,&shadowBuffer);
     
     // delete batchs
     if (paperBatchs != NULL) {
@@ -101,12 +96,16 @@
     /* 准备纹理 */
     // 图片纹理
     [self loadTextureWithId:&paperTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"sex" ofType:@"png"]];
+    [self loadTextureWithId:&shadowTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"shadow" ofType:@"png"]];
     // 阴影纹理和FBO
-    [self createShadowTexture];
+    //[self createShadowTexture];
+    // 阴影模糊纹理和FBO
+    //[self createBlurTexture];
     
     // 准备渲染图形的批次
     [self createPaperBatchArray];       // papers
     [self createBackgroundBatch];
+    //[self createBlurBatch];
 }
 
 - (id) initWithImagePaths:(NSArray *)paths{
@@ -120,7 +119,7 @@
 -(void) changeSize:(CGSize)size{
     frameSize = CGSizeMake(size.width, size.height);
     // 准备数据
-    paningMove.moveSensitivity = frameSize.width/2;
+    paningMove.moveSensitivity = frameSize.width/3;
     pinchMove.pinchSensitivity =  frameSize.width/2;
     
 	// Prevent a divide by zero
@@ -141,6 +140,7 @@
     backgroundPipeline.viewFrustum.SetOrthographic(-1, 1, -1, 1, -10, 10);
     backgroundPipeline.projectionMatrix.LoadMatrix(backgroundPipeline.viewFrustum.GetProjectionMatrix());
     backgroundPipeline.transformPipeline.SetMatrixStacks(backgroundPipeline.modelViewMatrix, backgroundPipeline.projectionMatrix);
+    
 }
 
 - (void)viewDidLoad{
@@ -173,22 +173,20 @@
     view.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
     view.drawableMultisample = GLKViewDrawableMultisampleNone;
     
-    // GL初始化配置
-    [self setupGL];
+    
     
     // 设置Size
     if (([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationLandscapeLeft) || ([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationLandscapeRight)) {
         CGSize size = CGSizeMake(SCREEN_HEIGHT,SCREEN_WIDTH);
         [self changeSize:size];
-        paningMove.moveSensitivity = size.width;
-        pinchMove.pinchSensitivity = paningMove.moveSensitivity;
     }else{
         CGSize size = CGSizeMake(SCREEN_WIDTH, SCREEN_HEIGHT);
         
         [self changeSize:size];
-        paningMove.moveSensitivity = size.width;
-        pinchMove.pinchSensitivity = paningMove.moveSensitivity;
     }
+    
+    // GL初始化配置
+    [self setupGL];
     
     // 添加手势
     [self addGesture];
@@ -337,38 +335,6 @@
     [texData release];
 }
 
-// 构造阴影纹理
-- (void) createShadowTexture{
-    glGenTextures(1, &shadowTexture);
-    
-    glBindTexture(GL_TEXTURE_2D, shadowTexture);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-    
-    // we do not want to wrap, this will cause incorrect shadows to be rendered
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-    
-    // create or reuse the depth texture
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RG_EXT, frameSize.width, frameSize.height, 0, GL_RG_EXT, GL_HALF_FLOAT_OES, 0);
-    glGenerateMipmap(GL_TEXTURE_2D);
-    
-    // unbind it for now
-    glBindTexture(GL_TEXTURE_2D, 0);
-    
-    // create a framebuffer object to attach the depth texture to
-    glGenFramebuffers(1, &shadowBuffer);
-    glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer);
-    
-    // attach the depth texture to the render buffer
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, shadowTexture, 0);
-    GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-    NSAssert(status == GL_FRAMEBUFFER_COMPLETE, @"error creating shadow FBO, status code 0x%4X", status);
-    
-    // unbind the FBO
-    glBindFramebuffer(GL_FRAMEBUFFER, 0);
-}
-
 
 // 构造需要的着色器
 - (void) initShaders{
@@ -396,57 +362,27 @@
     // background shader
     vp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
     fp = [[[NSBundle mainBundle] pathForResource:@"BackgroundFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
-    backgroundFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp,3,GLT_ATTRIBUTE_VERTEX,"vVertex",GLT_ATTRIBUTE_NORMAL,"vNormal",GLT_ATTRIBUTE_TEXTURE0,"vTexCoord");
-    
+    backgroundFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp,3,GLT_ATTRIBUTE_VERTEX,"vVertex",GLT_ATTRIBUTE_NORMAL,"vNormal");
     backgroundFlatLightShader.mvpMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "mvpMatrix");
     backgroundFlatLightShader.mvMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "mvMatrix");
+    backgroundFlatLightShader.mvsMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "mvsMatrix");
     backgroundFlatLightShader.normalMatrix = glGetUniformLocation(backgroundFlatLightShader.shaderId, "normalMatrix");
-    backgroundFlatLightShader.lightPosition = glGetUniformLocation(backgroundFlatLightShader.shaderId, "vLightPosition");
-    backgroundFlatLightShader.ambientColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "ambientColor");
-    backgroundFlatLightShader.diffuseColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "diffuseColor");
-    backgroundFlatLightShader.colorMap = glGetUniformLocation(backgroundFlatLightShader.shaderId, "colorMap");
+    backgroundFlatLightShader.lightPosition = glGetUniformLocation(backgroundFlatLightShader.shaderId, "lightPosition");
+    backgroundFlatLightShader.lightColor = glGetUniformLocation(backgroundFlatLightShader.shaderId, "lightColor");
+    backgroundFlatLightShader.shadowMap = glGetUniformLocation(backgroundFlatLightShader.shaderId, "shadowMap");
     
-    // shadowdepth shader
-    shadowDepthShader.mvpMatrix = glGetUniformLocation(shadowDepthShader.shaderId, "mvpMatrix");
+    // papershadow shader
+    vp = [[[NSBundle mainBundle] pathForResource:@"PaperShadow" ofType:@"vsh"] cStringUsingEncoding:NSUTF8StringEncoding];
+    fp = [[[NSBundle mainBundle] pathForResource:@"PaperShadow" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
+    paperShadowShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp,3,GLT_ATTRIBUTE_VERTEX,"vVertex",GLT_ATTRIBUTE_TEXTURE0,"vTexCoord");
+    paperShadowShader.mvpMatrix = glGetUniformLocation(paperShadowShader.shaderId, "mvpMatrix");
+    paperShadowShader.mvMatrix = glGetUniformLocation(paperShadowShader.shaderId, "mvMatrix");
+    paperShadowShader.colorMap = glGetUniformLocation(paperShadowShader.shaderId, "colorMap");
 }
 
 
 #pragma mark - 
 #pragma mark 绘图
-
-// 绘制背景
-- (void) drawBackground{
-    // 启用深度测试
-    glEnable(GL_DEPTH_TEST);
-    
-    backgroundPipeline.modelViewMatrix.PushMatrix();
-    backgroundPipeline.modelViewMatrix.Translate(0, 0, -7);
-    
-    // 绑定着色器
-    glUseProgram(backgroundFlatLightShader.shaderId);
-    
-    // 传递数据给着色器
-    GLfloat vAmbientColor[] = { 0.1f, 0.1f, 0.1f, 1.0f };   // 环境光
-    GLfloat vDiffuseColor[] = { 0.5f, 0.54f, 0.54f, 1.0f };   // 散射光
-    
-    GLfloat vLightPos[] = {0.0f, 0.0f, -5.6f};
-    glUniform4fv(backgroundFlatLightShader.ambientColor, 1, vAmbientColor);
-    glUniform4fv(backgroundFlatLightShader.diffuseColor, 1, vDiffuseColor);
-    glUniform3fv(backgroundFlatLightShader.lightPosition, 1, vLightPos);
-    glUniformMatrix4fv(backgroundFlatLightShader.mvpMatrix, 1, GL_FALSE, backgroundPipeline.transformPipeline.GetModelViewProjectionMatrix());
-    glUniformMatrix4fv(backgroundFlatLightShader.mvMatrix, 1, GL_FALSE, backgroundPipeline.transformPipeline.GetModelViewMatrix());
-    glUniformMatrix3fv(backgroundFlatLightShader.normalMatrix, 1, GL_FALSE, backgroundPipeline.transformPipeline.GetNormalMatrix());
-    
-    //glUniform1f(backgroundFlatLightShader.colorMap, 0);
-    
-    // 纹理
-    //glBindTexture(GL_TEXTURE_2D, self.varianceShadowBuffer.texture);
-    
-    backgroundBatch.Draw();
-    
-    backgroundPipeline.modelViewMatrix.PopMatrix();
-}
-
 // 绘制所有的书页
 - (void) drawPapersLookAt:(M3DMatrix44f)lookAt shadow:(BOOL)shadow{
 
@@ -533,9 +469,17 @@
         }
         
         if (shadow) {
-            // 启用阴影深度着色器
-            glUseProgram(shadowDepthShader.shaderId);
-            glUniformMatrix4fv(shadowDepthShader.mvpMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewProjectionMatrix());
+            
+            // 启用书页光照着色器
+            glUseProgram(paperShadowShader.shaderId);
+            glUniformMatrix4fv(paperShadowShader.mvpMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewProjectionMatrix());
+            glUniformMatrix4fv(paperShadowShader.mvMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetModelViewMatrix());
+        
+            glUniform1f(paperShadowShader.colorMap, 0);
+            
+            // 纹理
+            glBindTexture(GL_TEXTURE_2D, shadowTexture);
+            
             paperBatchs[i].Draw();
         }else{
             // 启用书页光照着色器
@@ -586,68 +530,13 @@
 
 // 绘制书页投影
 - (void) drawShadows{
-    // 将视点移动到光源位置，绘制投影
-    glBindFramebuffer(GL_FRAMEBUFFER, shadowBuffer);
-    glViewport(0, 0, frameSize.width, frameSize.height);
-    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-    // create the projection matrix from the cameras view
-    static const GLKVector3 kLightPosition = {0.0, 1.0, 0.0 };      // 观察点
-    static const GLKVector3 kLightLookAt = { 0.0, 0.0, -0.5 };     // 中心点
+   // create the projection matrix from the cameras view
+    static const GLKVector3 kLightPosition = {0.0, 0.0, 0.0 };      // 观察点
+    static const GLKVector3 kLightLookAt = { 0, 0.04, -1.0 };     // 中心点
     GLKMatrix4 cameraViewMatrix = GLKMatrix4MakeLookAt(kLightPosition.x, kLightPosition.y, kLightPosition.z, kLightLookAt.x, kLightLookAt.y, kLightLookAt.z, 0, 1, 0);
+    
+    
     [self drawPapersLookAt:cameraViewMatrix.m shadow:YES];
- 
-    
-    /* 对阴影进行动态模糊 */ 
-    static const GLfloat vertices[] = {-1, -1, 0, 1, -1, 0, -1, 1, 0, 1, 1, 0};
-    static const GLfloat textureCoords[] = {0, 0, 1, 0, 0, 1, 1, 1};
-    
-    // get the current bound FBO and viewport size
-    GLint oldFBO;
-    GLint viewport[4];
-    glGetIntegerv(GL_FRAMEBUFFER_BINDING, &oldFBO);
-    glGetIntegerv(GL_VIEWPORT, viewport);
-    
-    // switch to the blur shader
-    glUseProgram(self.shader.program);
-    
-    // set the viewport to use the whole pixel buffer
-    glViewport(0, 0, self.size.width, self.size.height);
-    
-    // enable the vertex attributes
-    glEnableVertexAttribArray(BlurShaderPositionAttribute);
-    glVertexAttribPointer(BlurShaderPositionAttribute, 3, GL_FLOAT, GL_FALSE, 0, vertices);
-    glEnableVertexAttribArray(BlurShaderTexCoordAttribute);
-    glVertexAttribPointer(BlurShaderTexCoordAttribute, 2, GL_FLOAT, GL_FALSE, 0, textureCoords);
-    
-    // bind the texture to blur
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, texture);
-    glUniform1i(self.shader.sampler, 0);
-    
-    // set the filter weights and offset steps
-    glUniform1fv(self.shader.filterOffsets, 3, kFilterOffsets);
-    glUniform1fv(self.shader.filterWeights, 3, kFilterWeights);
-    glUniform2f(self.shader.pixelStep, 0, 1.0 / self.size.height);
-    
-    // blur in the horizontal direction into the bounce buffer
-    glBindFramebuffer(GL_FRAMEBUFFER, _bounceFBO);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    
-    // now blur in the vertical direction back into the original buffer
-    glBindFramebuffer(GL_FRAMEBUFFER, oldFBO);
-    glClear(GL_COLOR_BUFFER_BIT);
-    glBindTexture(GL_TEXTURE_2D, _bounceTex);
-    glUniform2f(self.shader.pixelStep, 1.0 / self.size.width, 0);
-    glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);
-    
-    // cleanup
-    glDisableVertexAttribArray(BlurShaderPositionAttribute);
-    glDisableVertexAttribArray(BlurShaderTexCoordAttribute);
-    glUseProgram(0);
-    glViewport(viewport[0], viewport[1], viewport[2], viewport[3]);
-    glBindFramebuffer(GL_FRAMEBUFFER, oldFBO);
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
@@ -660,24 +549,37 @@
     // normal
     [self normalViewsTimes:0.3];
     
+    // move
+    [self moveWithTime:0.5];
+    
     // 清理画布
-    glClearColor(0.65f, 0.65f, 0.65f, 1.0f);
+    glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     // 清除颜色缓冲区和深度缓冲区
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     
-    // 启用深度测试
-    glEnable(GL_DEPTH_TEST);
+   
     
     // 启用颜色抖动
     glEnable(GL_DITHER);
     
     /************************准备开整**************************/
     
+    // 深度只读
+    glDepthMask(GL_FALSE);
+    
+    
+    // 启用混合
+    glEnable(GL_BLEND);
+    glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
     // 在缓冲区绘制阴影
     [self drawShadows];
+    glDisable(GL_BLEND);
     
-    // 绘制背景
-    [self drawBackground];
+    // 深度读写
+    glDepthMask(GL_TRUE);
+    
+    // 启用深度测试
+    glEnable(GL_DEPTH_TEST);
     
     // 绘制书页
     [self drawPapers];
@@ -689,9 +591,6 @@
 
 #pragma mark -
 #pragma mark PanMove & PinchMove
-- (float) touchLengthMoveTo:(CGPoint)touchPoint{
-    return -touchPoint.x + paningMove.startTouch.x;
-}
 
 - (float) pinchLengthMoveTo:(CGPoint)touchPoint0 anotherPoint:(CGPoint)touchPoint1{
     float x0 = ABS(pinchMove.pinchTouch0.x - pinchMove.pinchTouch1.x);
@@ -888,6 +787,28 @@
     }
 }
 
+- (void) moveWithTime:(float)time{
+    if (paningMove.needMove) {
+        if (paningMove.currentTime == 0.0) {
+            paningMove.currentTime = stopWatch.GetElapsedSeconds();
+            paningMove.endAcceleration = -paningMove.endVelocity/time;
+        }
+        CFTimeInterval timeOffset = stopWatch.GetElapsedSeconds() - paningMove.currentTime;
+        if (timeOffset > time) {
+            paningMove.needMove = NO;
+            paningMove.currentTime = 0.0;
+            
+            paningMove.isMoving = NO;
+            paningMove.needReset = YES;
+        }else{
+            float s = paningMove.endVelocity * timeOffset + 0.5 * paningMove.endAcceleration * timeOffset * timeOffset;
+            [self moveChange:paningMove.endMove + s];
+        }
+    }
+    
+    
+}
+
 #pragma mark -
 #pragma mark GestureReceive
 // 点击
@@ -902,6 +823,7 @@
 
 // 滑动
 - (void)paningGestureReceive:(UIPanGestureRecognizer *)recoginzer{
+    
     if (pinchMove.isPinching || self.paperStatus == PaperFold) {
         return;
     }
@@ -911,23 +833,27 @@
             paningMove.needReset = YES;
             return;
         }
-        paningMove.endTouch = [recoginzer locationOfTouch:0 inView:self.view];
-        paningMove.startTouch = paningMove.endTouch;
         paningMove.startPageIndex = self.pageIndex;
         paningMove.isMoving = YES;
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
-        paningMove.needReset = YES;
-        paningMove.isMoving = NO;
+        paningMove.endMove = -[recoginzer translationInView:self.view].x;
+        paningMove.endVelocity = -[recoginzer velocityInView:self.view].x;
+        if (ABS(paningMove.endVelocity) > 1000) {
+            paningMove.needMove = YES;
+        }else{
+            paningMove.needReset = YES;
+            paningMove.isMoving = NO;
+        }
         return;
         // cancal panning 回弹
+        
     }else if (recoginzer.state == UIGestureRecognizerStateCancelled){
         paningMove.needReset = YES;
         paningMove.isMoving = NO;
         return;
     }else if(recoginzer.state == UIGestureRecognizerStateChanged){
-        paningMove.endTouch = [recoginzer locationOfTouch:0 inView:self.view];
         if (paningMove.isMoving) {
-            float move = [self touchLengthMoveTo:paningMove.endTouch];
+            float move = -[recoginzer translationInView:self.view].x;
             [self moveChange:move];
         }
     }
