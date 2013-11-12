@@ -149,6 +149,12 @@ typedef struct {
     CGSize frameSize;
     
     bool animating;
+    
+    float animationValueFrom;
+    float animationValueTo;
+    float *animationValue;
+    float animationTimeOffset;
+    float animationTimeEnd;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;

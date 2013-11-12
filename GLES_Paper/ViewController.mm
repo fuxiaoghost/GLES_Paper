@@ -923,20 +923,34 @@
 
 #pragma mark -
 #pragma mark Animation
-- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valuefrom valueTo:(float)valueTo{
+- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
     // 加速
 }
 
-- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valuefrom valueTo:(float)valueTo{
+- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
     // 减速
+    animationTimeOffset = 0.0f;
+    animationTimeEnd = time;
+    animationValue = valueFrom;
+    animationValueFrom = *valueFrom;
+    animationValueTo = valueTo;
     self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/PAPER_FRAMESPERSECOND
                                                            target:self
-                                                         selector:@selector(step)
+                                                         selector:@selector(animationTimerStep)
                                                          userInfo:nil
                                                           repeats:YES];
 }
 
 - (void) animationTimerStep{
+    animationTimeOffset += (1.0/PAPER_FRAMESPERSECOND);
+    if (animationTimeOffset >= animationTimeEnd) {
+        // 终止
+        [self.animationTimer invalidate];
+        self.animationTimer = nil;
+    }
+    float a = animationValueTo/animationValueFrom;
+    float b = animationValueFrom;
+    float t = animationTimeOffset/animationTimeEnd;
     
 }
 - (float) bezierValueFrom:(float)valueFrom to:(float)valueTo by:(float)valueBy t:(float)t{
