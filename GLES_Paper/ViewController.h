@@ -147,6 +147,8 @@ typedef struct {
     CStopWatch stopWatch;                       // 停表
     
     CGSize frameSize;
+    
+    bool animating;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;

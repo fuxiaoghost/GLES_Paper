@@ -25,18 +25,19 @@
 
 
 @interface ViewController () {
-    
+
 }
 @property (nonatomic,retain) NSArray *imagePathArray;        // 图片地址
 @property (retain, nonatomic) EAGLContext *context;
 @property (nonatomic,retain) UILabel *debugLabel;
 @property (nonatomic,assign) PaperStatus paperStatus;           // 书页的当前状态(PaperNormal,PaperUnfold,PaperFold)
-
+@property (nonatomic,retain) NSTimer *animationTimer;
 - (void)setupGL;
 - (void)tearDownGL;
 @end
 
 @implementation ViewController
+@synthesize animationTimer;
 
 - (void)dealloc{
     [self tearDownGL];
@@ -48,6 +49,7 @@
     [_context release];
     self.imagePathArray = nil;
     self.debugLabel = nil;
+    self.animationTimer = nil;
     [super dealloc];
 }
 
@@ -64,6 +66,7 @@
         }
         self.context = nil;
         self.debugLabel = nil;
+        
     }
 }
 
@@ -603,6 +606,8 @@
 
 // 单手滑动
 - (void) moveChange:(float)move{
+    
+    
     NSInteger currentIndex = paningMove.startPageIndex + (int)(move/paningMove.moveSensitivity);
     if (currentIndex < 0 || currentIndex >= self.imagePathArray.count/2) {
         return;
@@ -637,6 +642,7 @@
 #pragma mark PinchChange
 // 捏合运动
 - (void) pinchChange:(float)move{
+    
     if(self.paperStatus == PaperUnfold){
         if (move < 0) {
             move = -move;
@@ -916,9 +922,32 @@
 }
 
 #pragma mark -
+#pragma mark Animation
+- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valuefrom valueTo:(float)valueTo{
+    // 加速
+}
+
+- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valuefrom valueTo:(float)valueTo{
+    // 减速
+    self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/PAPER_FRAMESPERSECOND
+                                                           target:self
+                                                         selector:@selector(step)
+                                                         userInfo:nil
+                                                          repeats:YES];
+}
+
+- (void) animationTimerStep{
+    
+}
+- (float) bezierValueFrom:(float)valueFrom to:(float)valueTo by:(float)valueBy t:(float)t{
+    return (1.0f - t) * (1.0f - t) * valueFrom + 2 * t * (1.0f - t) * valueBy + t * t * valueTo;
+}
+
+
+
+#pragma mark -
 #pragma mark Rotation
 - (void) willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration{
-    
     [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
     if (toInterfaceOrientation == UIInterfaceOrientationPortrait || toInterfaceOrientation == UIInterfaceOrientationPortraitUpsideDown) {
         CGSize size = CGSizeMake(SCREEN_WIDTH, SCREEN_HEIGHT);
