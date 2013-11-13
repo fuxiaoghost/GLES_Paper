@@ -89,6 +89,10 @@ typedef struct {
     float endAcceleration;                      // 滑动结束时的加速度
     float endMove;                              // 滑动结束时已经移动的距离
     BOOL  needMove;                             // 是否需要继续滑动
+    
+    float move;
+    float lastTime;
+    float needPaning;
 }PaningMove;
 
 // 捏合动作

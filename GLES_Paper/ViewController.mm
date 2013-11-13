@@ -553,7 +553,7 @@
     [self normalViewsTimes:0.3];
     
     // move
-    [self moveWithTime:0.5];
+    [self moveChange];
     
     // 清理画布
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
@@ -605,10 +605,12 @@
 #pragma mark MoveChange
 
 // 单手滑动
-- (void) moveChange:(float)move{
+- (void) moveChange{
+    if (!paningMove.needPaning) {
+        return;
+    }
     
-    
-    NSInteger currentIndex = paningMove.startPageIndex + (int)(move/paningMove.moveSensitivity);
+    NSInteger currentIndex = paningMove.startPageIndex + (int)(paningMove.move/paningMove.moveSensitivity);
     if (currentIndex < 0 || currentIndex >= self.imagePathArray.count/2) {
         return;
     }
@@ -617,13 +619,13 @@
     self.pageIndex = currentIndex;
     
   
-    if (move > 0) {
-        paningMove.pageRemainder = move - paningMove.moveSensitivity * ((int)(move/paningMove.moveSensitivity));
+    if (paningMove.move > 0) {
+        paningMove.pageRemainder = paningMove.move - paningMove.moveSensitivity * ((int)(paningMove.move/paningMove.moveSensitivity));
         if (paningMove.pageRemainder > paningMove.moveSensitivity/2) {
             currentIndex++;
         }
-    }else if(move < 0){
-        paningMove.pageRemainder = (-move) + paningMove.moveSensitivity * ((int)(move/paningMove.moveSensitivity));
+    }else if(paningMove.move < 0){
+        paningMove.pageRemainder = (-paningMove.move) + paningMove.moveSensitivity * ((int)(paningMove.move/paningMove.moveSensitivity));
         if (paningMove.pageRemainder > paningMove.moveSensitivity/2) {
             currentIndex--;
         }
@@ -633,7 +635,7 @@
     paningMove.pageRemainder = paningMove.pageRemainder * paningMove.pageRemainder/paningMove.moveSensitivity;
     
     // 下一页的预测值
-    paningMove.nextPageIndex = move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
+    paningMove.nextPageIndex = paningMove.move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
     
     paningMove.x = PAPER_RADIUS * paningMove.pageRemainder/paningMove.moveSensitivity;
 }
@@ -793,28 +795,6 @@
     }
 }
 
-- (void) moveWithTime:(float)time{
-    if (paningMove.needMove) {
-        if (paningMove.currentTime == 0.0) {
-            paningMove.currentTime = stopWatch.GetElapsedSeconds();
-            paningMove.endAcceleration = -paningMove.endVelocity/time;
-        }
-        CFTimeInterval timeOffset = stopWatch.GetElapsedSeconds() - paningMove.currentTime;
-        if (timeOffset > time) {
-            paningMove.needMove = NO;
-            paningMove.currentTime = 0.0;
-            
-            paningMove.isMoving = NO;
-            paningMove.needReset = YES;
-        }else{
-            float s = paningMove.endVelocity * timeOffset + 0.5 * paningMove.endAcceleration * timeOffset * timeOffset;
-            [self moveChange:paningMove.endMove + s];
-        }
-    }
-    
-    
-}
-
 #pragma mark -
 #pragma mark GestureReceive
 // 点击
@@ -841,7 +821,11 @@
         }
         paningMove.startPageIndex = self.pageIndex;
         paningMove.isMoving = YES;
+        paningMove.move = 0.0f;
+        paningMove.lastTime = stopWatch.GetElapsedSeconds();
+        paningMove.needPaning = YES;
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
+        paningMove.needPaning = NO;
         paningMove.endMove = -[recoginzer translationInView:self.view].x;
         paningMove.endVelocity = -[recoginzer velocityInView:self.view].x;
         if (ABS(paningMove.endVelocity) > 1000) {
@@ -850,6 +834,12 @@
             paningMove.needReset = YES;
             paningMove.isMoving = NO;
         }
+        
+        paningMove.move = 0.0f;
+        paningMove.lastTime = 0.0f;
+        
+        [self.animationTimer invalidate];
+        self.animationTimer = nil;
         return;
         // cancal panning 回弹
         
@@ -860,7 +850,8 @@
     }else if(recoginzer.state == UIGestureRecognizerStateChanged){
         if (paningMove.isMoving) {
             float move = -[recoginzer translationInView:self.view].x;
-            [self moveChange:move];
+            [self animateEasyOutWithDuration:0.2 valueFrom:&paningMove.move valueTo:move];
+            paningMove.lastTime = stopWatch.GetElapsedSeconds();
         }
     }
 }
@@ -929,17 +920,25 @@
 
 - (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
     // 减速
+//    if (self.animationTimer) {
+//        [self.animationTimer invalidate];
+//        self.animationTimer = nil;
+//    }
     animationTimeOffset = 0.0f;
     animationTimeEnd = time;
     animationValue = valueFrom;
     animationValueFrom = *valueFrom;
     animationValueTo = valueTo;
-    self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/PAPER_FRAMESPERSECOND
-                                                           target:self
-                                                         selector:@selector(animationTimerStep)
-                                                         userInfo:nil
-                                                          repeats:YES];
+   
+    if (!self.animationTimer) {
+        self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/PAPER_FRAMESPERSECOND
+                                                               target:self
+                                                             selector:@selector(animationTimerStep)
+                                                             userInfo:nil
+                                                              repeats:YES];
+    }
 }
+
 
 - (void) animationTimerStep{
     animationTimeOffset += (1.0/PAPER_FRAMESPERSECOND);
@@ -947,11 +946,12 @@
         // 终止
         [self.animationTimer invalidate];
         self.animationTimer = nil;
-    }
-    float a = animationValueTo/animationValueFrom;
-    float b = animationValueFrom;
-    float t = animationTimeOffset/animationTimeEnd;
+    }else{
+        float t = animationTimeOffset/animationTimeEnd;
+        *animationValue =[self bezierValueFrom:animationValueFrom to:animationValueTo by:animationValueTo t:t];
     
+        NSLog(@"value:%f",*animationValue);
+    }
 }
 - (float) bezierValueFrom:(float)valueFrom to:(float)valueTo by:(float)valueBy t:(float)t{
     return (1.0f - t) * (1.0f - t) * valueFrom + 2 * t * (1.0f - t) * valueBy + t * t * valueTo;

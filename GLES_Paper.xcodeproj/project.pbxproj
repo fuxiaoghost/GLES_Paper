@@ -10,6 +10,7 @@
 		792C936D181FC23A00D7BFE7 /* test.m in Sources */ = {isa = PBXBuildFile; fileRef = 792C936C181FC23A00D7BFE7 /* test.m */; };
 		79486A4F18210109009CD7C1 /* BackgroundFlatLight.vsh in Resources */ = {isa = PBXBuildFile; fileRef = 79486A4E18210109009CD7C1 /* BackgroundFlatLight.vsh */; };
 		79486A511821013C009CD7C1 /* BackgroundFlatLight.fsh in Resources */ = {isa = PBXBuildFile; fileRef = 79486A501821013C009CD7C1 /* BackgroundFlatLight.fsh */; };
+		7951B40A183329FE000839DB /* PaperAnimation.m in Sources */ = {isa = PBXBuildFile; fileRef = 7951B409183329FE000839DB /* PaperAnimation.m */; };
 		7976171D181F61570093D43E /* GLKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7976171C181F61570093D43E /* GLKit.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 		797658BC181F66C9006EB977 /* GLBatch.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 797658B7181F66C9006EB977 /* GLBatch.cpp */; };
 		797658BD181F66C9006EB977 /* GLShaderManager.cpp in Sources */ = {isa = PBXBuildFile; fileRef = 797658B8181F66C9006EB977 /* GLShaderManager.cpp */; };
@@ -42,6 +43,8 @@
 		792C936C181FC23A00D7BFE7 /* test.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = test.m; sourceTree = "<group>"; };
 		79486A4E18210109009CD7C1 /* BackgroundFlatLight.vsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = BackgroundFlatLight.vsh; sourceTree = "<group>"; };
 		79486A501821013C009CD7C1 /* BackgroundFlatLight.fsh */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.glsl; path = BackgroundFlatLight.fsh; sourceTree = "<group>"; };
+		7951B408183329FE000839DB /* PaperAnimation.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PaperAnimation.h; sourceTree = "<group>"; };
+		7951B409183329FE000839DB /* PaperAnimation.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PaperAnimation.m; sourceTree = "<group>"; };
 		7976171C181F61570093D43E /* GLKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = GLKit.framework; path = System/Library/Frameworks/GLKit.framework; sourceTree = SDKROOT; };
 		797658B7181F66C9006EB977 /* GLBatch.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GLBatch.cpp; sourceTree = "<group>"; };
 		797658B8181F66C9006EB977 /* GLShaderManager.cpp */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.cpp.cpp; path = GLShaderManager.cpp; sourceTree = "<group>"; };
@@ -170,6 +173,8 @@
 				79A2B2591814D45C0091CBAA /* AppDelegate.mm */,
 				79A2B2651814D45C0091CBAA /* ViewController.h */,
 				79A2B2661814D45C0091CBAA /* ViewController.mm */,
+				7951B408183329FE000839DB /* PaperAnimation.h */,
+				7951B409183329FE000839DB /* PaperAnimation.m */,
 				792C936B181FC23A00D7BFE7 /* test.h */,
 				792C936C181FC23A00D7BFE7 /* test.m */,
 				79E925571814FFD100707886 /* GLTools */,
@@ -310,6 +315,7 @@
 				797658BF181F66C9006EB977 /* GLTriangleBatch.cpp in Sources */,
 				797658C0181F66C9006EB977 /* math3d.cpp in Sources */,
 				792C936D181FC23A00D7BFE7 /* test.m in Sources */,
+				7951B40A183329FE000839DB /* PaperAnimation.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
