@@ -21,6 +21,7 @@
 #define PAPER_ROTATION_RADIUS     0.3f              // 整体的大圆圈的旋转半径
 #define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE) // 沿x轴距离
 #define PAPER_RADIUS              (2 * PAPER_X_DISTANCE)
+#define PAPER_VELOCITY            1000              // 滑动速度的阈值
 
 
 
@@ -31,13 +32,11 @@
 @property (retain, nonatomic) EAGLContext *context;
 @property (nonatomic,retain) UILabel *debugLabel;
 @property (nonatomic,assign) PaperStatus paperStatus;           // 书页的当前状态(PaperNormal,PaperUnfold,PaperFold)
-@property (nonatomic,retain) NSTimer *animationTimer;
 - (void)setupGL;
 - (void)tearDownGL;
 @end
 
 @implementation ViewController
-@synthesize animationTimer;
 
 - (void)dealloc{
     [self tearDownGL];
@@ -49,7 +48,8 @@
     [_context release];
     self.imagePathArray = nil;
     self.debugLabel = nil;
-    self.animationTimer = nil;
+    [pinchAnimation release];
+    [pinchAnimation2 release];
     [super dealloc];
 }
 
@@ -115,6 +115,8 @@
     if (self = [super init]) {
         self.imagePathArray = paths;
         angel = 0;
+        pinchAnimation = [[PaperAnimation alloc] init];
+        pinchAnimation2 = [[PaperAnimation alloc] init];
     }
     return self;
 }
@@ -174,7 +176,7 @@
     view.context = self.context;
     view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
     view.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
-    view.drawableMultisample = GLKViewDrawableMultisampleNone;
+    view.drawableMultisample = GLKViewDrawableMultisample4X;
     
     
     
@@ -543,14 +545,12 @@
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
-    // 重置变换
-    [self resetViewsTimes:0.3];
     
     // Unfold
-    [self unfoldViewsTimes:0.3];
+    //[self unfoldViewsTimes:0.3];
     
     // normal
-    [self normalViewsTimes:0.3];
+    //[self normalViewsTimes:0.3];
     
     // move
     [self moveChange];
@@ -575,7 +575,7 @@
     glEnable(GL_BLEND);
     glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
     // 在缓冲区绘制阴影
-    [self drawShadows];
+    //[self drawShadows];
     glDisable(GL_BLEND);
     
     // 深度读写
@@ -619,7 +619,7 @@
     self.pageIndex = currentIndex;
     
   
-    if (paningMove.move > 0) {
+    if (paningMove.move >= 0) {
         paningMove.pageRemainder = paningMove.move - paningMove.moveSensitivity * ((int)(paningMove.move/paningMove.moveSensitivity));
         if (paningMove.pageRemainder > paningMove.moveSensitivity/2) {
             currentIndex++;
@@ -638,6 +638,7 @@
     paningMove.nextPageIndex = paningMove.move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
     
     paningMove.x = PAPER_RADIUS * paningMove.pageRemainder/paningMove.moveSensitivity;
+    
 }
 
 #pragma mark -
@@ -753,48 +754,6 @@
     }
 }
 
-- (void) resetViewsTimes:(float)time{
-    if (paningMove.needReset) {
-        if (paningMove.currentTime == 0.0) {
-            paningMove.currentTime = stopWatch.GetElapsedSeconds();
-            paningMove.currentX = paningMove.x;
-        }
-        CFTimeInterval timeOffset = stopWatch.GetElapsedSeconds() - paningMove.currentTime;
-        if (timeOffset > time) {
-            paningMove.needReset = NO;
-            paningMove.currentTime = 0.0;
-            if (paningMove.currentX < PAPER_RADIUS * 0.02) {
-                paningMove.x = 0;
-            }else{
-                paningMove.x = 0;
-                if (paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2) {
-                    self.pageIndex = paningMove.nextPageIndex;
-                }
-            }
-        }else{
-            // s = v0 * t - (1/2) * a * t * t; 减速运动
-            if (paningMove.currentX < PAPER_RADIUS*0.02) {
-                float s = paningMove.currentX;
-                float v0 = 2 * s /time;
-                paningMove.acceleration = 2 * s/(time * time);
-                paningMove.x = paningMove.currentX - (v0 * timeOffset - paningMove.acceleration * timeOffset * timeOffset/2);
-            }else{
-                if (paningMove.nextPageIndex < 0 || paningMove.nextPageIndex >= self.imagePathArray.count/2) {
-                    float s = paningMove.currentX;
-                    float v0 = 2 * s /time;
-                    paningMove.acceleration = 2 * s/(time * time);
-                    paningMove.x = paningMove.currentX - (v0 * timeOffset - paningMove.acceleration * timeOffset * timeOffset/2);
-                }else{
-                    float s = paningMove.currentX - PAPER_RADIUS;
-                    float v0 = 2 * s / time;
-                    paningMove.acceleration = 2 * s/(time * time);
-                    paningMove.x = paningMove.currentX - (v0 * timeOffset - paningMove.acceleration * timeOffset * timeOffset/2);
-                }
-            }
-        }
-    }
-}
-
 #pragma mark -
 #pragma mark GestureReceive
 // 点击
@@ -822,39 +781,61 @@
         paningMove.startPageIndex = self.pageIndex;
         paningMove.isMoving = YES;
         paningMove.move = 0.0f;
-        paningMove.lastTime = stopWatch.GetElapsedSeconds();
         paningMove.needPaning = YES;
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
-        paningMove.needPaning = NO;
-        paningMove.endMove = -[recoginzer translationInView:self.view].x;
-        paningMove.endVelocity = -[recoginzer velocityInView:self.view].x;
-        if (ABS(paningMove.endVelocity) > 1000) {
-            paningMove.needMove = YES;
-        }else{
-            paningMove.needReset = YES;
-            paningMove.isMoving = NO;
-        }
-        
-        paningMove.move = 0.0f;
-        paningMove.lastTime = 0.0f;
-        
-        [self.animationTimer invalidate];
-        self.animationTimer = nil;
+        [self performSelector:@selector(paningEnd:) withObject:[NSNumber numberWithFloat:-[recoginzer velocityInView:self.view].x] afterDelay:0.1];
         return;
-        // cancal panning 回弹
-        
     }else if (recoginzer.state == UIGestureRecognizerStateCancelled){
-        paningMove.needReset = YES;
-        paningMove.isMoving = NO;
+        
         return;
     }else if(recoginzer.state == UIGestureRecognizerStateChanged){
         if (paningMove.isMoving) {
+            // 手指滑动过程中通过插值算法填充间断点
             float move = -[recoginzer translationInView:self.view].x;
-            [self animateEasyOutWithDuration:0.2 valueFrom:&paningMove.move valueTo:move];
-            paningMove.lastTime = stopWatch.GetElapsedSeconds();
+            [pinchAnimation animateEasyOutWithDuration:0.1 valueFrom:&paningMove.move valueTo:move delay:0.0f];
         }
     }
 }
+
+- (void) paningEnd:(id)obj{
+    float velocity = [obj floatValue];
+    
+    float x = velocity;
+    // 速度大于阈值进行衰减处理
+    if (ABS(x) > PAPER_VELOCITY) {
+        float toValue = x * 0.3/2;
+        int count = (int)((paningMove.move + toValue)/paningMove.moveSensitivity);
+        toValue = count * paningMove.moveSensitivity;
+        [pinchAnimation2 animateEasyOutWithDuration:0.1 valueFrom:&paningMove.move valueTo:toValue delay:0.0 completion:^(BOOL finished) {
+            paningMove.needPaning = NO;
+            paningMove.move = 0.0f;
+            if (paningMove.x > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2) {
+                paningMove.x = 0;
+                self.pageIndex = paningMove.nextPageIndex;
+            }else{
+                paningMove.x = 0;
+            }
+        }];
+    }else{
+        paningMove.needPaning = NO;
+        paningMove.move = 0.0f;
+        // 停止插值动画
+        if ((ABS(x)>PAPER_VELOCITY/2)||(paningMove.x > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2)) {
+            [pinchAnimation2 animateEasyOutWithDuration:0.1 valueFrom:&paningMove.x valueTo:PAPER_RADIUS delay:0.0 completion:^(BOOL finished) {
+                
+                paningMove.x = 0;
+                self.pageIndex = paningMove.nextPageIndex;
+            }];
+        }else{
+            [pinchAnimation2 animateEasyOutWithDuration:0.1 valueFrom:&paningMove.x valueTo:0 delay:0.0 completion:^(BOOL finished) {
+                
+                paningMove.x = 0;
+            }];
+        }
+    }
+
+}
+
 
 // 捏合
 - (void) pinchGestureReceive:(UIPinchGestureRecognizer *)recoginzer{
@@ -912,55 +893,19 @@
     }
 }
 
-#pragma mark -
-#pragma mark Animation
-- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
-    // 加速
-}
-
-- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
-    // 减速
-//    if (self.animationTimer) {
-//        [self.animationTimer invalidate];
-//        self.animationTimer = nil;
-//    }
-    animationTimeOffset = 0.0f;
-    animationTimeEnd = time;
-    animationValue = valueFrom;
-    animationValueFrom = *valueFrom;
-    animationValueTo = valueTo;
-   
-    if (!self.animationTimer) {
-        self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/PAPER_FRAMESPERSECOND
-                                                               target:self
-                                                             selector:@selector(animationTimerStep)
-                                                             userInfo:nil
-                                                              repeats:YES];
-    }
-}
-
-
-- (void) animationTimerStep{
-    animationTimeOffset += (1.0/PAPER_FRAMESPERSECOND);
-    if (animationTimeOffset >= animationTimeEnd) {
-        // 终止
-        [self.animationTimer invalidate];
-        self.animationTimer = nil;
-    }else{
-        float t = animationTimeOffset/animationTimeEnd;
-        *animationValue =[self bezierValueFrom:animationValueFrom to:animationValueTo by:animationValueTo t:t];
-    
-        NSLog(@"value:%f",*animationValue);
-    }
-}
-- (float) bezierValueFrom:(float)valueFrom to:(float)valueTo by:(float)valueBy t:(float)t{
-    return (1.0f - t) * (1.0f - t) * valueFrom + 2 * t * (1.0f - t) * valueBy + t * t * valueTo;
-}
-
-
 
 #pragma mark -
 #pragma mark Rotation
+
+- (BOOL) shouldAutorotate{
+    return YES;
+}
+
+
+- (BOOL) shouldAutorotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation{
+    return YES;
+}
+
 - (void) willAnimateRotationToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration{
     [super willRotateToInterfaceOrientation:toInterfaceOrientation duration:duration];
     if (toInterfaceOrientation == UIInterfaceOrientationPortrait || toInterfaceOrientation == UIInterfaceOrientationPortraitUpsideDown) {

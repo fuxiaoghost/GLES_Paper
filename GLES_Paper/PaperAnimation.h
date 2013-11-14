@@ -8,6 +8,23 @@
 
 #import <Foundation/Foundation.h>
 
-@interface PaperAnimation : NSObject
+@interface PaperAnimation : NSObject{
+@private
+    float animationValueFrom;
+    float animationValueTo;
+    float animationValueBy;
+    float *animationValue;
+    float animationTimeOffset;
+    float animationTimeEnd;
+    float animationTimeDelay;
+}
+- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo delay:(float)delay;
 
+- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo delay:(float)delay;
+
+- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo delay:(float)delay completion:(void (^)(BOOL finished))completion;
+
+- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo delay:(float)delay completion:(void (^)(BOOL finished))completion;
+
+- (void) stopAnimation;
 @end

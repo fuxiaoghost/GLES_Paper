@@ -24,7 +24,7 @@
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
 
     NSMutableArray *array = [NSMutableArray arrayWithCapacity:0];
-    for (int i = 0; i < 10; i++) {
+    for (int i = 0; i < 20; i++) {
         [array addObject:@""];
     }
     self.viewController = [[[ViewController alloc] initWithImagePaths:array] autorelease];

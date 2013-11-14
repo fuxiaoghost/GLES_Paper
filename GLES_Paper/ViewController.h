@@ -18,6 +18,7 @@
 #import "GLMatrixStack.h"
 #import "GLGeometryTransform.h"
 #import "StopWatch.h"
+#import "PaperAnimation.h"
 
 // 当前书页的状态
 typedef enum {
@@ -90,9 +91,8 @@ typedef struct {
     float endMove;                              // 滑动结束时已经移动的距离
     BOOL  needMove;                             // 是否需要继续滑动
     
-    float move;
-    float lastTime;
-    float needPaning;
+    float move;                                 // 当前已经滑动的距离
+    float needPaning;                           // 是否需要换算插值点
 }PaningMove;
 
 // 捏合动作
@@ -148,17 +148,15 @@ typedef struct {
     PaningMove paningMove;                      // 滑动翻页动作
     PinchMove pinchMove;                        // 捏合动作
     
+    /* 插值动画 */
+    PaperAnimation *pinchAnimation;             // 滑动插值动画
+    PaperAnimation *pinchAnimation2;
+    
     CStopWatch stopWatch;                       // 停表
     
     CGSize frameSize;
     
     bool animating;
-    
-    float animationValueFrom;
-    float animationValueTo;
-    float *animationValue;
-    float animationTimeOffset;
-    float animationTimeEnd;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
 -(void) changeSize:(CGSize)size;
