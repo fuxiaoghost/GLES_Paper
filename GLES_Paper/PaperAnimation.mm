@@ -13,6 +13,7 @@
 @interface PaperAnimation()
 @property (nonatomic,retain) NSTimer *animationTimer;
 @property (nonatomic,copy) void (^completion)(BOOL finished);
+@property (nonatomic,copy) void (^valueChanged)(float value);
 @end
 
 @implementation PaperAnimation
@@ -20,6 +21,7 @@
 
 - (void) dealloc{
     self.completion = nil;
+    self.valueChanged = nil;
     [super dealloc];
 }
 
@@ -27,13 +29,17 @@
 - (void) stopAnimation{
     [self.animationTimer invalidate];
     self.animationTimer = nil;
+    self.valueChanged = nil;
     NSLog(@"Animation stop");
 }
 
-- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo delay:(float)delay{
+- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
     if (self.completion) {
         self.completion(YES);
         self.completion = nil;
+    }
+    if (self.valueChanged) {
+        self.valueChanged = nil;
     }
     // 加速
     animationTimeOffset = 0.0f;
@@ -42,7 +48,6 @@
     animationValueFrom = *valueFrom;
     animationValueTo = valueTo;
     animationValueBy = *valueFrom;
-    animationTimeDelay = delay>0?delay:0;
     
     if (!self.animationTimer) {
         self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/STEPSPERSECOND
@@ -53,10 +58,13 @@
     }
 }
 
-- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo delay:(float)delay{
+- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
     if (self.completion) {
         self.completion(YES);
         self.completion = nil;
+    }
+    if (self.valueChanged) {
+        self.valueChanged = nil;
     }
     // 减速
     animationTimeOffset = 0.0f;
@@ -65,7 +73,6 @@
     animationValueFrom = *valueFrom;
     animationValueTo = valueTo;
     animationValueBy = valueTo;
-    animationTimeDelay = delay>0?delay:0;
 
    
     if (!self.animationTimer) {
@@ -77,26 +84,37 @@
     }
 }
 
-- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo delay:(float)delay completion:(void (^)(BOOL finished))completion {
+- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL finished))completion {
     
-    [self animateEasyOutWithDuration:time valueFrom:valueFrom valueTo:valueTo delay:delay];
+    [self animateEasyOutWithDuration:time valueFrom:valueFrom valueTo:valueTo];
     
     self.completion = completion;
 }
 
-- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo delay:(float)delay completion:(void (^)(BOOL finished))completion {
+- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL finished))completion {
    
-    [self animateEasyInWithDuration:time valueFrom:valueFrom valueTo:valueTo delay:delay];
+    [self animateEasyInWithDuration:time valueFrom:valueFrom valueTo:valueTo];
     
      self.completion = completion;
 }
 
+- (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL))completion valueChanged:(void(^)(float value))valueChanged{
+    [self animateEasyOutWithDuration:time valueFrom:valueFrom valueTo:valueTo];
+    
+    self.completion = completion;
+    self.valueChanged = valueChanged;
+}
+
+- (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL))completion valueChanged:(void(^)(float Z))valueChanged{
+    [self animateEasyInWithDuration:time valueFrom:valueFrom valueTo:valueTo];
+    
+    self.completion = completion;
+    self.valueChanged = valueChanged;
+}
+
 - (void) animationTimerStep{
     animationTimeOffset += (1.0/STEPSPERSECOND);
-    if (animationTimeOffset < animationTimeDelay) {
-        return;
-    }
-    if (animationTimeOffset >= animationTimeEnd + animationTimeDelay) {
+    if (animationTimeOffset >= animationTimeEnd) {
         *animationValue = animationValueTo;
         [self.animationTimer invalidate];
         self.animationTimer = nil;
@@ -106,9 +124,11 @@
         }
         NSLog(@"Animation end of time out");
     }else{
-        float t = (animationTimeOffset - animationTimeDelay)/animationTimeEnd;
+        float t = (animationTimeOffset)/animationTimeEnd;
         *animationValue =[self bezierValueFrom:animationValueFrom to:animationValueTo by:animationValueBy t:t];
-        
+        if (self.valueChanged) {
+            self.valueChanged(*animationValue);
+        }
         //NSLog(@"Animation to:%f",*animationValue);
     }
 }

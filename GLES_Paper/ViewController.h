@@ -76,23 +76,11 @@ typedef struct {
 typedef struct {
     NSInteger nextPageIndex;                    // 下一页的预测值
     float x = 0;                                // 翻页时活动页移动的距离
-    BOOL needReset = NO;                        // 是否需要重置
-    CFAbsoluteTime currentTime = 0.0;           // 记录当前时间
-    float currentX = 0;                         // 还原时记录x的当前值
-    float acceleration;                         // 加速度
     float pageRemainder = 0;                    // 翻页时的进度
     BOOL isMoving = NO;                         // 单手滑动翻页，是否正在移动
-    CGPoint startTouch;                         // 记录单手滑动初始位置
-    CGPoint endTouch;                           // 记录单手滑动结束位置
     NSInteger startPageIndex;                   // 滑动开始前当前页
     float moveSensitivity;                      // 翻一页所需要的滑动距离
-    float endVelocity;                          // 滑动结束时的速度
-    float endAcceleration;                      // 滑动结束时的加速度
-    float endMove;                              // 滑动结束时已经移动的距离
-    BOOL  needMove;                             // 是否需要继续滑动
-    
     float move;                                 // 当前已经滑动的距离
-    float needPaning;                           // 是否需要换算插值点
 }PaningMove;
 
 // 捏合动作
@@ -108,12 +96,7 @@ typedef struct {
     float currentTheta = 0;
     float currentBeta = 0;
     float currentZMove = 0;
-    BOOL needUnfold = NO;                       // 是否需要展开
-    BOOL needNormal = NO;                       // 是否需要还原
-    CFAbsoluteTime currentTime = 0.0;           // 记录当前时间
-    float accelerationTheta;                    // 加速度
-    float accelerationBeta;                     //
-    float accelerationZ;
+    float process;
     
 }PinchMove;
 
@@ -148,9 +131,12 @@ typedef struct {
     PaningMove paningMove;                      // 滑动翻页动作
     PinchMove pinchMove;                        // 捏合动作
     
+    
     /* 插值动画 */
-    PaperAnimation *pinchAnimation;             // 滑动插值动画
-    PaperAnimation *pinchAnimation2;
+    PaperAnimation *paningAnimation;             // 滑动插值动画
+    PaperAnimation *paningAnimation2;            //
+    PaperAnimation *pinchAnimation;              //
+    PaperAnimation *pinchAnimation2;             //
     
     CStopWatch stopWatch;                       // 停表
     

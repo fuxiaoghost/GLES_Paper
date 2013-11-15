@@ -50,6 +50,9 @@
     self.debugLabel = nil;
     [pinchAnimation release];
     [pinchAnimation2 release];
+    [paningAnimation2 release];
+    [paningAnimation release];
+    
     [super dealloc];
 }
 
@@ -117,6 +120,8 @@
         angel = 0;
         pinchAnimation = [[PaperAnimation alloc] init];
         pinchAnimation2 = [[PaperAnimation alloc] init];
+        paningAnimation2 = [[PaperAnimation alloc] init];
+        paningAnimation = [[PaperAnimation alloc] init];
     }
     return self;
 }
@@ -546,15 +551,6 @@
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
     
-    // Unfold
-    //[self unfoldViewsTimes:0.3];
-    
-    // normal
-    //[self normalViewsTimes:0.3];
-    
-    // move
-    [self moveChange];
-    
     // 清理画布
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     // 清除颜色缓冲区和深度缓冲区
@@ -605,12 +601,9 @@
 #pragma mark MoveChange
 
 // 单手滑动
-- (void) moveChange{
-    if (!paningMove.needPaning) {
-        return;
-    }
+- (void) moveChange:(float)move{
     
-    NSInteger currentIndex = paningMove.startPageIndex + (int)(paningMove.move/paningMove.moveSensitivity);
+    NSInteger currentIndex = paningMove.startPageIndex + (int)(move/paningMove.moveSensitivity);
     if (currentIndex < 0 || currentIndex >= self.imagePathArray.count/2) {
         return;
     }
@@ -620,12 +613,12 @@
     
   
     if (paningMove.move >= 0) {
-        paningMove.pageRemainder = paningMove.move - paningMove.moveSensitivity * ((int)(paningMove.move/paningMove.moveSensitivity));
+        paningMove.pageRemainder = paningMove.move - paningMove.moveSensitivity * ((int)(move/paningMove.moveSensitivity));
         if (paningMove.pageRemainder > paningMove.moveSensitivity/2) {
             currentIndex++;
         }
     }else if(paningMove.move < 0){
-        paningMove.pageRemainder = (-paningMove.move) + paningMove.moveSensitivity * ((int)(paningMove.move/paningMove.moveSensitivity));
+        paningMove.pageRemainder = (-move) + paningMove.moveSensitivity * ((int)(move/paningMove.moveSensitivity));
         if (paningMove.pageRemainder > paningMove.moveSensitivity/2) {
             currentIndex--;
         }
@@ -645,7 +638,7 @@
 #pragma mark PinchChange
 // 捏合运动
 - (void) pinchChange:(float)move{
-    
+
     if(self.paperStatus == PaperUnfold){
         if (move < 0) {
             move = -move;
@@ -680,78 +673,41 @@
 #pragma mark ResetViews
 
 - (void) unfoldViewsTimes:(float)time{
-    if (pinchMove.needUnfold) {
-        if (pinchMove.currentTime == 0.0) {
-            pinchMove.currentTime = stopWatch.GetElapsedSeconds();
-            pinchMove.currentBeta = pinchMove.beta;
-            pinchMove.currentTheta = pinchMove.theta;
-            pinchMove.currentZMove = pinchMove.zMove;
-        }
-        CFTimeInterval timeOffset = stopWatch.GetElapsedSeconds() - pinchMove.currentTime;
-        if (timeOffset > time) {
-            self.paperStatus = PaperUnfold;
-            panGesture.enabled = NO;
-            pinchMove.needUnfold = NO;
-            pinchMove.currentTime = 0.0;
-            pinchMove.beta = -(PAPER_MAX_ANGLE - PAPER_MIN_ANGLE);
-            pinchMove.zMove = abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(60));
-            pinchMove.theta = 0.0f;
-        }else{
-            float betaS = pinchMove.currentBeta - (-(PAPER_MAX_ANGLE - PAPER_MIN_ANGLE));
-            float zMoveS = pinchMove.currentZMove -  (abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(60)));
-            float thetaS = pinchMove.currentTheta;
-            
-            float betaV0 = 2 * betaS/time;
-            float zMoveV0 = 2 * zMoveS/time;
-            float thetaV0 = 2 * thetaS/time;
-            
-            pinchMove.accelerationTheta = 2 * thetaS/(time * time);
-            pinchMove.accelerationBeta = 2 * betaS/(time * time);
-            pinchMove.accelerationZ = 2 * zMoveS/(time * time);
-            
-            
-            pinchMove.theta = pinchMove.currentTheta - (thetaV0 * timeOffset - pinchMove.accelerationTheta * timeOffset * timeOffset/2);
-            pinchMove.beta = pinchMove.currentBeta - (betaV0 * timeOffset - pinchMove.accelerationBeta * timeOffset * timeOffset/2);
-            pinchMove.zMove = pinchMove.currentZMove - (zMoveV0 * timeOffset - pinchMove.accelerationZ * timeOffset * timeOffset/2);
-        }
-    }
+    pinchMove.process = 0.0f;
+    pinchMove.currentBeta = pinchMove.beta;
+    pinchMove.currentTheta = pinchMove.theta;
+    pinchMove.currentZMove = pinchMove.zMove;
+    
+    [pinchAnimation2 animateEasyOutWithDuration:time valueFrom:&pinchMove.process valueTo:1.0f completion:^(BOOL) {
+        self.paperStatus = PaperUnfold;
+        panGesture.enabled = NO;
+        pinchMove.beta = -(PAPER_MAX_ANGLE - PAPER_MIN_ANGLE);
+        pinchMove.zMove = abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(60));
+        pinchMove.theta = 0.0f;
+    } valueChanged:^(float value) {
+        pinchMove.beta = pinchMove.currentBeta + value * (-(PAPER_MAX_ANGLE - PAPER_MIN_ANGLE) - pinchMove.currentBeta);
+        pinchMove.theta = pinchMove.currentTheta + value * (0.0f - pinchMove.currentTheta);
+        pinchMove.zMove = pinchMove.currentZMove + value * ((abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(60))) - pinchMove.currentZMove);
+    }];
 }
 
 - (void) normalViewsTimes:(float)time{
-    if (pinchMove.needNormal) {
-        if (pinchMove.currentTime == 0.0) {
-            pinchMove.currentTime = stopWatch.GetElapsedSeconds();
-            pinchMove.currentBeta = pinchMove.beta;
-            pinchMove.currentTheta = pinchMove.theta;
-            pinchMove.currentZMove = pinchMove.zMove;
-        }
-        CFTimeInterval timeOffset = stopWatch.GetElapsedSeconds() - pinchMove.currentTime;
-        if (timeOffset > time) {
-            panGesture.enabled = YES;
-            self.paperStatus = PaperNormal;
-            pinchMove.needNormal = NO;
-            pinchMove.currentTime = 0.0;
-            pinchMove.beta = 0.0f;
-            pinchMove.theta = 0.0f;
-            pinchMove.zMove = 0.0f;
-        }else{
-            float thetaS = pinchMove.currentTheta;
-            float thetaV0 = 2 * thetaS / time;
-            pinchMove.accelerationTheta = 2 * thetaS/(time * time);
-            
-            float betaS = pinchMove.currentBeta;
-            float betaV0 = 2 * betaS / time;
-            pinchMove.accelerationBeta = 2 * betaS/(time * time);
-            
-            float zMoveS = pinchMove.currentZMove;
-            float zMoveV0 = 2 * zMoveS / time;
-            pinchMove.accelerationZ = 2 * zMoveS/(time * time);
-            
-            pinchMove.theta = pinchMove.currentTheta - (thetaV0 * timeOffset - pinchMove.accelerationTheta * timeOffset * timeOffset/2);
-            pinchMove.beta = pinchMove.currentBeta - (betaV0 * timeOffset - pinchMove.accelerationBeta * timeOffset * timeOffset/2);
-            pinchMove.zMove = pinchMove.currentZMove - (zMoveV0 * timeOffset - pinchMove.accelerationZ * timeOffset * timeOffset/2);
-        }
-    }
+    pinchMove.process = 0.0f;
+    pinchMove.currentBeta = pinchMove.beta;
+    pinchMove.currentTheta = pinchMove.theta;
+    pinchMove.currentZMove = pinchMove.zMove;
+    
+    [pinchAnimation2 animateEasyOutWithDuration:time valueFrom:&pinchMove.process valueTo:1.0f completion:^(BOOL) {
+        self.paperStatus = PaperNormal;
+        panGesture.enabled = YES;
+        pinchMove.beta = 0.0f;
+        pinchMove.theta = 0.0f;
+        pinchMove.zMove = 0.0f;
+    } valueChanged:^(float value) {
+        pinchMove.beta = pinchMove.currentBeta + value * (0.0f - pinchMove.currentBeta);
+        pinchMove.theta = pinchMove.currentTheta + value * (0.0f - pinchMove.currentTheta);
+        pinchMove.zMove = pinchMove.currentZMove + value * (0.0f - pinchMove.currentZMove);
+    }];
 }
 
 #pragma mark -
@@ -759,9 +715,9 @@
 // 点击
 - (void) tapGestureReceive:(UITapGestureRecognizer *)recoginzer{
     if (self.paperStatus == PaperUnfold) {
-        pinchMove.needNormal = YES;
+        [self normalViewsTimes:0.2];
     }else if(self.paperStatus == PaperNormal){
-        pinchMove.needUnfold = YES;
+        [self unfoldViewsTimes:0.2];
     }
 }
 
@@ -774,14 +730,9 @@
     }
     // begin paning 显示last screenshot
     if (recoginzer.state == UIGestureRecognizerStateBegan) {
-        if (self.paperStatus == PaperUnfold) {
-            paningMove.needReset = YES;
-            return;
-        }
         paningMove.startPageIndex = self.pageIndex;
         paningMove.isMoving = YES;
         paningMove.move = 0.0f;
-        paningMove.needPaning = YES;
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
         [self performSelector:@selector(paningEnd:) withObject:[NSNumber numberWithFloat:-[recoginzer velocityInView:self.view].x] afterDelay:0.1];
         return;
@@ -792,7 +743,11 @@
         if (paningMove.isMoving) {
             // 手指滑动过程中通过插值算法填充间断点
             float move = -[recoginzer translationInView:self.view].x;
-            [pinchAnimation animateEasyOutWithDuration:0.1 valueFrom:&paningMove.move valueTo:move delay:0.0f];
+            [paningAnimation animateEasyOutWithDuration:0.1 valueFrom:&paningMove.move valueTo:move completion:^(BOOL finished) {
+                
+            } valueChanged:^(float value) {
+                [self moveChange:value];
+            }];
         }
     }
 }
@@ -803,11 +758,10 @@
     float x = velocity;
     // 速度大于阈值进行衰减处理
     if (ABS(x) > PAPER_VELOCITY) {
-        float toValue = x * 0.3/2;
+        float toValue = x * 0.2/2;
         int count = (int)((paningMove.move + toValue)/paningMove.moveSensitivity);
         toValue = count * paningMove.moveSensitivity;
-        [pinchAnimation2 animateEasyOutWithDuration:0.1 valueFrom:&paningMove.move valueTo:toValue delay:0.0 completion:^(BOOL finished) {
-            paningMove.needPaning = NO;
+        [paningAnimation2 animateEasyOutWithDuration:0.2 valueFrom:&paningMove.move valueTo:toValue completion:^(BOOL finished) {
             paningMove.move = 0.0f;
             if (paningMove.x > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2) {
                 paningMove.x = 0;
@@ -815,20 +769,20 @@
             }else{
                 paningMove.x = 0;
             }
+        } valueChanged:^(float value) {
+            [self moveChange:value];
         }];
     }else{
-        paningMove.needPaning = NO;
         paningMove.move = 0.0f;
         // 停止插值动画
         if ((ABS(x)>PAPER_VELOCITY/2)||(paningMove.x > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2)) {
-            [pinchAnimation2 animateEasyOutWithDuration:0.1 valueFrom:&paningMove.x valueTo:PAPER_RADIUS delay:0.0 completion:^(BOOL finished) {
+            [paningAnimation2 animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:PAPER_RADIUS completion:^(BOOL finished) {
                 
                 paningMove.x = 0;
                 self.pageIndex = paningMove.nextPageIndex;
             }];
         }else{
-            [pinchAnimation2 animateEasyOutWithDuration:0.1 valueFrom:&paningMove.x valueTo:0 delay:0.0 completion:^(BOOL finished) {
-                
+            [paningAnimation2 animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:0 completion:^(BOOL finished) {
                 paningMove.x = 0;
             }];
         }
@@ -845,36 +799,15 @@
         if ([recoginzer numberOfTouches] <= 1) {
             return;
         }
-        
+        pinchMove.scope = 0;
         pinchMove.isPinching = YES;
         pinchMove.pinchTouch0 = [recoginzer locationOfTouch:0 inView:self.view];
         pinchMove.pinchTouch1 = [recoginzer locationOfTouch:1 inView:self.view];
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
         pinchMove.isPinching = NO;
-        
-        if (self.paperStatus == PaperNormal) {
-            if(pinchMove.scope > pinchMove.pinchSensitivity * 0.1){
-                // 展开
-                pinchMove.needUnfold = YES;
-            }else{
-                // 还原
-                pinchMove.needNormal = YES;
-            }
-        }else if(self.paperStatus == PaperUnfold){
-            if (pinchMove.scope < pinchMove.pinchSensitivity * 0.1) {
-                // 还原
-                pinchMove.needNormal = YES;
-            }else{
-                // 展开
-                pinchMove.needUnfold = YES;
-            }
-        }
+        [self performSelector:@selector(pinchEnd) withObject:nil afterDelay:0.1];
         return;
-        // cancal panning 回弹
     }else if (recoginzer.state == UIGestureRecognizerStateCancelled){
-        pinchMove.isPinching = NO;
-        //[self resetViewsAnimated:startTouch time:0.3];
-
         return;
     }else if(recoginzer.state == UIGestureRecognizerStateChanged){
         // 限制为双指操作
@@ -882,13 +815,35 @@
             return;
         }
         if (pinchMove.isPinching) {
-            pinchMove.scope = 0;
+            
             CGPoint touch0 = [recoginzer locationOfTouch:0 inView:self.view];
             CGPoint touch1 = [recoginzer locationOfTouch:1 inView:self.view];
             
-            pinchMove.scope = [self pinchLengthMoveTo:touch0 anotherPoint:touch1];
-            
-            [self pinchChange:pinchMove.scope];
+            [pinchAnimation animateEasyOutWithDuration:0.1 valueFrom:&pinchMove.scope valueTo:[self pinchLengthMoveTo:touch0 anotherPoint:touch1] completion:^(BOOL finished) {
+                
+            } valueChanged:^(float value) {
+                [self pinchChange:value];
+            }];
+        }
+    }
+}
+
+- (void) pinchEnd{
+    if (self.paperStatus == PaperNormal) {
+        if(pinchMove.scope > pinchMove.pinchSensitivity * 0.1){
+            // 展开
+            [self unfoldViewsTimes:0.2];
+        }else{
+            // 还原
+            [self normalViewsTimes:0.2];
+        }
+    }else if(self.paperStatus == PaperUnfold){
+        if (pinchMove.scope < pinchMove.pinchSensitivity * 0.1) {
+            // 还原
+            [self normalViewsTimes:0.2];
+        }else{
+            // 展开
+            [self unfoldViewsTimes:0.2];
         }
     }
 }
