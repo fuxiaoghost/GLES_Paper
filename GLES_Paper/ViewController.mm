@@ -49,8 +49,6 @@
     self.imagePathArray = nil;
     self.debugLabel = nil;
     [pinchAnimation release];
-    [pinchAnimation2 release];
-    [paningAnimation2 release];
     [paningAnimation release];
     
     [super dealloc];
@@ -119,8 +117,6 @@
         self.imagePathArray = paths;
         angel = 0;
         pinchAnimation = [[PaperAnimation alloc] init];
-        pinchAnimation2 = [[PaperAnimation alloc] init];
-        paningAnimation2 = [[PaperAnimation alloc] init];
         paningAnimation = [[PaperAnimation alloc] init];
     }
     return self;
@@ -396,12 +392,10 @@
 // 绘制所有的书页
 - (void) drawPapersLookAt:(M3DMatrix44f)lookAt shadow:(BOOL)shadow{
 
-    angel = angel - 0.01;
-    if (angel < - M_PI * 2) {
-        angel = 0;
-    }
+    self.pageIndex = ABS((int)(paningMove.x / PAPER_RADIUS));
+    paningMove.nextPageIndex = paningMove.move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
     
-    float x = paningMove.x;
+    float x = paningMove.x - PAPER_RADIUS * self.pageIndex;
     float y = (-cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS) + sqrtf((cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) * (cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) - 4 * (x * x - 2 * PAPER_RADIUS * x)))/2;
     float theta = asinf(y * sinf(M_PI - 2 * PAPER_MAX_ANGLE)/PAPER_RADIUS);
     
@@ -412,10 +406,6 @@
         // 4、照相机机位
         paperPipeline.modelViewMatrix.PushMatrix(lookAt);
         paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + pinchMove.zMove);
-        
-        
-        // 3、
-        //paperPipeline.modelViewMatrix.Rotate(angel, 0, 1, 0);
         
         // 3、绕y轴旋转
         NSInteger index = (i + 1)/2;
@@ -678,7 +668,7 @@
     pinchMove.currentTheta = pinchMove.theta;
     pinchMove.currentZMove = pinchMove.zMove;
     
-    [pinchAnimation2 animateEasyOutWithDuration:time valueFrom:&pinchMove.process valueTo:1.0f completion:^(BOOL) {
+    [pinchAnimation animateEasyOutWithDuration:time valueFrom:&pinchMove.process valueTo:1.0f completion:^(BOOL) {
         self.paperStatus = PaperUnfold;
         panGesture.enabled = NO;
         pinchMove.beta = -(PAPER_MAX_ANGLE - PAPER_MIN_ANGLE);
@@ -697,7 +687,7 @@
     pinchMove.currentTheta = pinchMove.theta;
     pinchMove.currentZMove = pinchMove.zMove;
     
-    [pinchAnimation2 animateEasyOutWithDuration:time valueFrom:&pinchMove.process valueTo:1.0f completion:^(BOOL) {
+    [pinchAnimation animateEasyOutWithDuration:time valueFrom:&pinchMove.process valueTo:1.0f completion:^(BOOL) {
         self.paperStatus = PaperNormal;
         panGesture.enabled = YES;
         pinchMove.beta = 0.0f;
@@ -743,10 +733,12 @@
         if (paningMove.isMoving) {
             // 手指滑动过程中通过插值算法填充间断点
             float move = -[recoginzer translationInView:self.view].x;
-            [paningAnimation animateEasyOutWithDuration:0.1 valueFrom:&paningMove.move valueTo:move completion:^(BOOL finished) {
+            paningMove.move = move;
+            float index = ABS((int)(move/paningMove.moveSensitivity));
+            float x = (index + paningMove.startPageIndex) * PAPER_RADIUS + PAPER_RADIUS * ABS(move - index*paningMove.moveSensitivity)/paningMove.moveSensitivity;
+            NSLog(@"%f",x);
+            [paningAnimation animateEasyOutWithDuration:0.1 valueFrom:&paningMove.x valueTo:x completion:^(BOOL finished) {
                 
-            } valueChanged:^(float value) {
-                [self moveChange:value];
             }];
         }
     }
@@ -761,7 +753,7 @@
         float toValue = x * 0.2/2;
         int count = (int)((paningMove.move + toValue)/paningMove.moveSensitivity);
         toValue = count * paningMove.moveSensitivity;
-        [paningAnimation2 animateEasyOutWithDuration:0.2 valueFrom:&paningMove.move valueTo:toValue completion:^(BOOL finished) {
+        [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.move valueTo:toValue completion:^(BOOL finished) {
             paningMove.move = 0.0f;
             if (paningMove.x > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2) {
                 paningMove.x = 0;
@@ -776,13 +768,13 @@
         paningMove.move = 0.0f;
         // 停止插值动画
         if ((ABS(x)>PAPER_VELOCITY/2)||(paningMove.x > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2)) {
-            [paningAnimation2 animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:PAPER_RADIUS completion:^(BOOL finished) {
+            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:PAPER_RADIUS completion:^(BOOL finished) {
                 
                 paningMove.x = 0;
                 self.pageIndex = paningMove.nextPageIndex;
             }];
         }else{
-            [paningAnimation2 animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:0 completion:^(BOOL finished) {
+            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:0 completion:^(BOOL finished) {
                 paningMove.x = 0;
             }];
         }

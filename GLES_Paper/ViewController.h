@@ -134,9 +134,7 @@ typedef struct {
     
     /* 插值动画 */
     PaperAnimation *paningAnimation;             // 滑动插值动画
-    PaperAnimation *paningAnimation2;            //
     PaperAnimation *pinchAnimation;              //
-    PaperAnimation *pinchAnimation2;             //
     
     CStopWatch stopWatch;                       // 停表
     
