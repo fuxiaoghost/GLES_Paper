@@ -33,6 +33,8 @@
     NSLog(@"Animation stop");
 }
 
+#pragma mark -
+#pragma mark BaseAnimation
 - (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
     if (self.completion) {
         self.completion(YES);
@@ -48,6 +50,7 @@
     animationValueFrom = *valueFrom;
     animationValueTo = valueTo;
     animationValueBy = *valueFrom;
+    bezierPower = 2;
     
     if (!self.animationTimer) {
         self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/STEPSPERSECOND
@@ -73,6 +76,7 @@
     animationValueFrom = *valueFrom;
     animationValueTo = valueTo;
     animationValueBy = valueTo;
+    bezierPower = 2;
 
    
     if (!self.animationTimer) {
@@ -84,6 +88,35 @@
     }
 }
 
+- (void) animateEasyInOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
+    if (self.completion) {
+        self.completion(YES);
+        self.completion = nil;
+    }
+    if (self.valueChanged) {
+        self.valueChanged = nil;
+    }
+    // 减速
+    animationTimeOffset = 0.0f;
+    animationTimeEnd = time;
+    animationValue = valueFrom;
+    animationValueFrom = *valueFrom;
+    animationValueTo = valueTo;
+    animationValueBy = valueTo;
+    bezierPower = 3;
+    
+    
+    if (!self.animationTimer) {
+        self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/STEPSPERSECOND
+                                                               target:self
+                                                             selector:@selector(animationTimerStep)
+                                                             userInfo:nil
+                                                              repeats:YES];
+    }
+}
+
+#pragma mark -
+#pragma mark Animation With Completion
 - (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL finished))completion {
     
     [self animateEasyOutWithDuration:time valueFrom:valueFrom valueTo:valueTo];
@@ -95,8 +128,18 @@
    
     [self animateEasyInWithDuration:time valueFrom:valueFrom valueTo:valueTo];
     
-     self.completion = completion;
+    self.completion = completion;
 }
+
+- (void) animateEasyInOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo
+                           completion:(void (^)(BOOL finished))completion{
+    [self animateEasyInOutWithDuration:time valueFrom:valueFrom valueTo:valueTo];
+    self.completion = completion;
+    
+}
+
+#pragma mark -
+#pragma mark Animation With Completion And ValueChanged
 
 - (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL))completion valueChanged:(void(^)(float value))valueChanged{
     [self animateEasyOutWithDuration:time valueFrom:valueFrom valueTo:valueTo];
@@ -108,6 +151,12 @@
 - (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL))completion valueChanged:(void(^)(float Z))valueChanged{
     [self animateEasyInWithDuration:time valueFrom:valueFrom valueTo:valueTo];
     
+    self.completion = completion;
+    self.valueChanged = valueChanged;
+}
+
+- (void) animateEasyInOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL))completion valueChanged:(void(^)(float Z))valueChanged{
+    [self animateEasyInOutWithDuration:time valueFrom:valueFrom valueTo:valueTo];
     self.completion = completion;
     self.valueChanged = valueChanged;
 }
@@ -125,14 +174,27 @@
         NSLog(@"Animation end of time out");
     }else{
         float t = (animationTimeOffset)/animationTimeEnd;
-        *animationValue =[self bezierValueFrom:animationValueFrom to:animationValueTo by:animationValueBy t:t];
+        if (bezierPower == 2) {
+            *animationValue = [self bezierValueFrom:animationValueFrom to:animationValueTo by:animationValueTo t:t];
+        }else if(bezierPower == 3){
+            *animationValue = [self bezierValueFrom:animationValueFrom to:animationValueTo by0:animationValueFrom by1:animationValueTo t:t];
+        }
+        
         if (self.valueChanged) {
             self.valueChanged(*animationValue);
         }
-        //NSLog(@"Animation to:%f",*animationValue);
     }
 }
 - (float) bezierValueFrom:(float)valueFrom to:(float)valueTo by:(float)valueBy t:(float)t{
-    return (1.0f - t) * (1.0f - t) * valueFrom + 2 * t * (1.0f - t) * valueBy + t * t * valueTo;
+    return (1.0f - t) * (1.0f - t) * valueFrom
+            + 2 * t * (1.0f - t) * valueBy
+            + t * t * valueTo;
+}
+
+- (float) bezierValueFrom:(float)valueFrom to:(float)valueTo by0:(float)valueBy0 by1:(float)valueBy1 t:(float)t{
+    return (1.0f - t) * (1.0f - t) * (1.0f - t) * valueFrom
+            + 3 * t * (1.0 - t) * (1.0 - t) * valueBy0
+            + 3 * t * t * (1.0 - t) * valueBy1
+            + t * t * t * valueTo;
 }
 @end
