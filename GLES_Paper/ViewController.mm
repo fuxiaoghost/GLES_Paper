@@ -717,7 +717,7 @@
             float move = -[recoginzer translationInView:self.view].x;
             paningMove.move = move;
             float x = [self changeMoveToX:move];
-            [paningAnimation animateEasyInWithDuration:0.1 valueFrom:&paningMove.x valueTo:x + paningMove.startX completion:^(BOOL finished) {
+            [paningAnimation animateEasyOutWithDuration:0.1 valueFrom:&paningMove.x valueTo:x + paningMove.startX completion:^(BOOL finished) {
                 
             }];
         }
