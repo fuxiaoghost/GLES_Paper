@@ -76,11 +76,12 @@ typedef struct {
 typedef struct {
     NSInteger nextPageIndex;                    // 下一页的预测值
     float x = 0;                                // 翻页时活动页移动的距离
+    float startX = 0;
     float pageRemainder = 0;                    // 翻页时的进度
     BOOL isMoving = NO;                         // 单手滑动翻页，是否正在移动
     NSInteger startPageIndex;                   // 滑动开始前当前页
     float moveSensitivity;                      // 翻一页所需要的滑动距离
-    float move;                                 // 当前已经滑动的距离
+    float move = 0.0f;                                 // 当前已经滑动的距离
 }PaningMove;
 
 // 捏合动作

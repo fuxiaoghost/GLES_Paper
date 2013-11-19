@@ -391,11 +391,25 @@
 #pragma mark 绘图
 // 绘制所有的书页
 - (void) drawPapersLookAt:(M3DMatrix44f)lookAt shadow:(BOOL)shadow{
-
-    self.pageIndex = ABS((int)(paningMove.x / PAPER_RADIUS));
+    
+    if (paningMove.move >0.0f) {
+        self.pageIndex = ((int)(paningMove.x / PAPER_RADIUS));
+    }else if(paningMove.move <0.0f){
+        self.pageIndex = ((int)(paningMove.x / PAPER_RADIUS)) + 1;
+    }else if(paningMove.move == 0.0f){
+        NSLog(@"%d",self.pageIndex);
+    }
+    
+    
+    
     paningMove.nextPageIndex = paningMove.move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
     
-    float x = paningMove.x - PAPER_RADIUS * self.pageIndex;
+    float x = ABS(paningMove.x - PAPER_RADIUS * self.pageIndex);
+    if (x > PAPER_RADIUS) {
+        self.pageIndex = self.pageIndex - 1;
+        x = x - PAPER_RADIUS;
+    }
+    
     float y = (-cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS) + sqrtf((cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) * (cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) - 4 * (x * x - 2 * PAPER_RADIUS * x)))/2;
     float theta = asinf(y * sinf(M_PI - 2 * PAPER_MAX_ANGLE)/PAPER_RADIUS);
     
@@ -590,39 +604,6 @@
 #pragma mark -
 #pragma mark MoveChange
 
-// 单手滑动
-- (void) moveChange:(float)move{
-    
-    NSInteger currentIndex = paningMove.startPageIndex + (int)(move/paningMove.moveSensitivity);
-    if (currentIndex < 0 || currentIndex >= self.imagePathArray.count/2) {
-        return;
-    }
-    
-    // 当前页面的值
-    self.pageIndex = currentIndex;
-    
-  
-    if (paningMove.move >= 0) {
-        paningMove.pageRemainder = paningMove.move - paningMove.moveSensitivity * ((int)(move/paningMove.moveSensitivity));
-        if (paningMove.pageRemainder > paningMove.moveSensitivity/2) {
-            currentIndex++;
-        }
-    }else if(paningMove.move < 0){
-        paningMove.pageRemainder = (-move) + paningMove.moveSensitivity * ((int)(move/paningMove.moveSensitivity));
-        if (paningMove.pageRemainder > paningMove.moveSensitivity/2) {
-            currentIndex--;
-        }
-    }
-    
-    // 变换曲线 y= x * x 减慢起始速度
-    paningMove.pageRemainder = paningMove.pageRemainder * paningMove.pageRemainder/paningMove.moveSensitivity;
-    
-    // 下一页的预测值
-    paningMove.nextPageIndex = paningMove.move > 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
-    
-    paningMove.x = PAPER_RADIUS * paningMove.pageRemainder/paningMove.moveSensitivity;
-    
-}
 
 #pragma mark -
 #pragma mark PinchChange
@@ -722,7 +703,8 @@
     if (recoginzer.state == UIGestureRecognizerStateBegan) {
         paningMove.startPageIndex = self.pageIndex;
         paningMove.isMoving = YES;
-        paningMove.move = 0.0f;
+        paningMove.move = 0.0001f;
+        paningMove.startX = paningMove.x;
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
         [self performSelector:@selector(paningEnd:) withObject:[NSNumber numberWithFloat:-[recoginzer velocityInView:self.view].x] afterDelay:0.1];
         return;
@@ -734,14 +716,18 @@
             // 手指滑动过程中通过插值算法填充间断点
             float move = -[recoginzer translationInView:self.view].x;
             paningMove.move = move;
-            float index = ABS((int)(move/paningMove.moveSensitivity));
-            float x = (index + paningMove.startPageIndex) * PAPER_RADIUS + PAPER_RADIUS * ABS(move - index*paningMove.moveSensitivity)/paningMove.moveSensitivity;
-            NSLog(@"%f",x);
-            [paningAnimation animateEasyOutWithDuration:0.1 valueFrom:&paningMove.x valueTo:x completion:^(BOOL finished) {
+            float x = [self changeMoveToX:move];
+            [paningAnimation animateEasyInWithDuration:0.1 valueFrom:&paningMove.x valueTo:x + paningMove.startX completion:^(BOOL finished) {
                 
             }];
         }
     }
+}
+
+- (float) changeMoveToX:(float)move{
+    float index = (int)(move/paningMove.moveSensitivity);
+    float x = index * PAPER_RADIUS + PAPER_RADIUS * (move - index * paningMove.moveSensitivity)/paningMove.moveSensitivity;
+    return x;
 }
 
 - (void) paningEnd:(id)obj{
@@ -752,31 +738,37 @@
     if (ABS(x) > PAPER_VELOCITY) {
         float toValue = x * 0.2/2;
         int count = (int)((paningMove.move + toValue)/paningMove.moveSensitivity);
+        
         toValue = count * paningMove.moveSensitivity;
-        [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.move valueTo:toValue completion:^(BOOL finished) {
-            paningMove.move = 0.0f;
-            if (paningMove.x > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2) {
-                paningMove.x = 0;
-                self.pageIndex = paningMove.nextPageIndex;
-            }else{
-                paningMove.x = 0;
-            }
-        } valueChanged:^(float value) {
-            [self moveChange:value];
-        }];
+
+        float x = [self changeMoveToX:toValue];
+        
+        float min = 0;
+        float max = PAPER_RADIUS * (self.imagePathArray.count/2 - 1);
+        float xto = x + paningMove.startX;
+        if (xto > max) {
+            xto = max;
+        }else if(xto < min){
+            xto = min;
+        }
+        [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:xto];
     }else{
-        paningMove.move = 0.0f;
+        int index = (int)(paningMove.x/PAPER_RADIUS);
+        if (paningMove.x < 0) {
+            index = 0;
+        }
+        if (index > self.imagePathArray.count/2 - 1) {
+            index = self.imagePathArray.count/2 - 1;
+        }
+        float leave = paningMove.x - index * PAPER_RADIUS;
         // 停止插值动画
-        if ((ABS(x)>PAPER_VELOCITY/2)||(paningMove.x > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2)) {
-            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:PAPER_RADIUS completion:^(BOOL finished) {
-                
-                paningMove.x = 0;
-                self.pageIndex = paningMove.nextPageIndex;
-            }];
+        if ((ABS(x)>PAPER_VELOCITY/2)||(leave > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2)) {
+            if (paningMove.move > 0) {
+                index = index + 1;
+            }
+            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:PAPER_RADIUS * index];
         }else{
-            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:0 completion:^(BOOL finished) {
-                paningMove.x = 0;
-            }];
+            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:PAPER_RADIUS * index];
         }
     }
 
