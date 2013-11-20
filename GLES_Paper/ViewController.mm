@@ -393,6 +393,8 @@
 // 绘制所有的书页
 - (void) drawPapersLookAt:(M3DMatrix44f)lookAt shadow:(BOOL)shadow{
     self.pageIndex = ((int)(paningMove.theta / PAPER_THETA));
+    
+    NSLog(@"%d  %.f",self.pageIndex,paningMove.theta / PAPER_THETA);
     // 
     float theta = ABS(paningMove.theta - PAPER_THETA * self.pageIndex);
     if (theta > PAPER_THETA) {
