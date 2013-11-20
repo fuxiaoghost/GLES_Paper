@@ -392,9 +392,8 @@
 #pragma mark 绘图
 // 绘制所有的书页
 - (void) drawPapersLookAt:(M3DMatrix44f)lookAt shadow:(BOOL)shadow{
-    self.pageIndex = ((int)(paningMove.theta / PAPER_THETA));
+    self.pageIndex = ((int)((paningMove.theta + 0.000001)/ PAPER_THETA));
     
-    NSLog(@"%d  %.f",self.pageIndex,paningMove.theta / PAPER_THETA);
     // 
     float theta = ABS(paningMove.theta - PAPER_THETA * self.pageIndex);
     if (theta > PAPER_THETA) {
@@ -407,10 +406,6 @@
     if (isnan(x)) {
         x = y;
     }
-    
-//    float y = (-cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS) + sqrtf((cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) * (cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) - 4 * (x * x - 2 * PAPER_RADIUS * x)))/2;
-//    float theta = asinf(y * sinf(M_PI - 2 * PAPER_MAX_ANGLE)/PAPER_RADIUS);
-    
     
     // 奇数旋转-PAPER_MIN_ANGLE；偶数旋转PAPER_MIN_ANGLE
     for (int i = 0; i < self.imagePathArray.count ; i++) {
@@ -555,8 +550,6 @@
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     // 清除颜色缓冲区和深度缓冲区
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-    
-   
     
     // 启用颜色抖动
     glEnable(GL_DITHER);
