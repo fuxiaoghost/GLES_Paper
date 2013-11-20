@@ -391,41 +391,29 @@
 #pragma mark 绘图
 // 绘制所有的书页
 - (void) drawPapersLookAt:(M3DMatrix44f)lookAt shadow:(BOOL)shadow{
-    BOOL border = NO;
-    if (paningMove.move >0.0f) {
-        self.pageIndex = ((int)(paningMove.x / PAPER_RADIUS));
-    }else if(paningMove.move <0.0f){
-        self.pageIndex = ((int)(paningMove.x / PAPER_RADIUS)) + 1;
-    }else if(paningMove.move == 0.0f){
-        self.pageIndex = ((int)(paningMove.x / PAPER_RADIUS));
-        border = YES;
-    }
+
     
-    
-    paningMove.nextPageIndex = paningMove.move >= 0 ? (self.pageIndex + 1):(self.pageIndex - 1);
-    
+    self.pageIndex = ((int)(paningMove.x / PAPER_RADIUS));
+    // 
     float x = ABS(paningMove.x - PAPER_RADIUS * self.pageIndex);
     if (x > PAPER_RADIUS) {
-        self.pageIndex = self.pageIndex - 1;
         x = x - PAPER_RADIUS;
     }
-    
     
     
     float y = (-cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS) + sqrtf((cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) * (cosf(M_PI - 2 * PAPER_MAX_ANGLE) * (2 * x - 2 * PAPER_RADIUS)) - 4 * (x * x - 2 * PAPER_RADIUS * x)))/2;
     float theta = asinf(y * sinf(M_PI - 2 * PAPER_MAX_ANGLE)/PAPER_RADIUS);
     
-    NSLog(@"%f",y);
     
     // 奇数旋转-PAPER_MIN_ANGLE；偶数旋转PAPER_MIN_ANGLE
     for (int i = 0; i < self.imagePathArray.count ; i++) {
+        NSInteger index = (i % 2 == 0 ? i/2 : (i + 1)/2);
         
         // 4、照相机机位
         paperPipeline.modelViewMatrix.PushMatrix(lookAt);
         paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + pinchMove.zMove);
         
         // 3、绕y轴旋转
-        NSInteger index = (i + 1)/2;
         float yRotate = 0;
         if (index <= self.pageIndex) {
             yRotate = -PAPER_MAX_ANGLE + pinchMove.beta;
@@ -435,51 +423,20 @@
         paperPipeline.modelViewMatrix.Rotate(yRotate, 0, 1, 0);
         
         // 2、绕固定点旋转
-        if (!border) {
-            if (paningMove.nextPageIndex > self.pageIndex) {
-                if (index == self.pageIndex + 1) {
-                    // 2.2
-                    paperPipeline.modelViewMatrix.Translate(PAPER_RADIUS - x, 0, 0);
-                    // 2.1
-                    paperPipeline.modelViewMatrix.Rotate(-theta, 0, 1, 0);
-                    // 2.0
-                    paperPipeline.modelViewMatrix.Translate(-(PAPER_RADIUS - x), 0, 0);
-                }
-            }else{
-                if (index == self.pageIndex) {
-                    // 2.2
-                    paperPipeline.modelViewMatrix.Translate(-(PAPER_RADIUS - x), 0, 0);
-                    // 2.1
-                    paperPipeline.modelViewMatrix.Rotate(theta, 0, 1, 0);
-                    // 2.0
-                    paperPipeline.modelViewMatrix.Translate(PAPER_RADIUS - x, 0, 0);
-                }
-            }
+        if (index == self.pageIndex + 1) {
+            // 2.2
+            paperPipeline.modelViewMatrix.Translate(PAPER_RADIUS - x, 0, 0);
+            // 2.1
+            paperPipeline.modelViewMatrix.Rotate(-theta, 0, 1, 0);
+            // 2.0
+            paperPipeline.modelViewMatrix.Translate(-(PAPER_RADIUS - x), 0, 0);;
         }
-        
         
         // 1、整体沿+x移动 PAPER_X_DISTANCE
-        index = i/2;
-        NSInteger tindex = (i + 1)/2;
         float xDistance = 0;
-        xDistance = (index - self.pageIndex) * 2 * sinf(PAPER_MIN_ANGLE - pinchMove.theta);
-        if (!border) {
-            if (paningMove.nextPageIndex > self.pageIndex) {
-                if (tindex <= self.pageIndex ) {
-                    xDistance = xDistance - y;
-                }else{
-                    xDistance = xDistance - x;
-                }
-                
-            }else{
-                if (tindex <= self.pageIndex) {
-                    xDistance = xDistance + x;
-                }else{
-                    xDistance = xDistance + y;
-                }
-            }
-        }
-        paperPipeline.modelViewMatrix.Translate(xDistance, 0, 0);
+        xDistance = (i/2 - self.pageIndex) * 2 * sinf(PAPER_MIN_ANGLE - pinchMove.theta);
+        float xOffset = (index - self.pageIndex) <= 0 ? -y : -x;
+        paperPipeline.modelViewMatrix.Translate(xDistance + xOffset, 0, 0);
         
         // 0、自身旋转
         if (i % 2 != 0) {
@@ -705,25 +662,34 @@
     if (pinchMove.isPinching || self.paperStatus == PaperFold) {
         return;
     }
-    // begin paning 显示last screenshot
+
     if (recoginzer.state == UIGestureRecognizerStateBegan) {
-        paningMove.startPageIndex = self.pageIndex;
-        paningMove.isMoving = YES;
-        paningMove.move = 0.000001f;
-        paningMove.startX = paningMove.x;
+        paningMove.isMoving = YES;              // 标记状态开始滑动
+        paningMove.move = 0.0f;                 // 重置滑动距离
+        paningMove.startX = paningMove.x;       // 记录已翻页距离
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
         [self performSelector:@selector(paningEnd:) withObject:[NSNumber numberWithFloat:-[recoginzer velocityInView:self.view].x] afterDelay:0.1];
         return;
     }else if (recoginzer.state == UIGestureRecognizerStateCancelled){
-        
         return;
     }else if(recoginzer.state == UIGestureRecognizerStateChanged){
         if (paningMove.isMoving) {
             // 手指滑动过程中通过插值算法填充间断点
             float move = -[recoginzer translationInView:self.view].x;
             paningMove.move = move;
-            float x = [self changeMoveToX:move];
-            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:x + paningMove.startX];
+            float x = [self changeMoveToX:move];        // 距离换算， 把滑动距离换算为书页的实际移动距离
+            float toValue = x + paningMove.startX;
+            
+            // 限定两个极限点
+            if (toValue < 0.0f) {
+                toValue = 0.0f;
+            }
+            if (toValue > PAPER_RADIUS * (self.imagePathArray.count/2 - 1)) {
+                toValue = PAPER_RADIUS * (self.imagePathArray.count/2 - 1);
+            }
+            
+            NSLog(@"%f",toValue);
+            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:toValue];
         }
     }
 }
@@ -740,16 +706,17 @@
     float x = velocity;
     // 速度大于阈值进行衰减处理
     if (ABS(x) > PAPER_VELOCITY) {
-        float toValue = x * 0.2/2;
+        float toValue = x * 0.2/2;      // 衰减距离
+        // 保证衰减结果为整数
         int count = (int)((paningMove.move + toValue)/paningMove.moveSensitivity);
-        
         toValue = count * paningMove.moveSensitivity;
-
-        float x = [self changeMoveToX:toValue];
+        float x = [self changeMoveToX:toValue];     // 距离换算
         
         float min = 0;
         float max = PAPER_RADIUS * (self.imagePathArray.count/2 - 1);
         float xto = x + paningMove.startX;
+        
+        // 限定两个极限点
         if (xto > max) {
             xto = max;
         }else if(xto < min){
@@ -765,13 +732,19 @@
             index = self.imagePathArray.count/2 - 1;
         }
         float leave = paningMove.x - index * PAPER_RADIUS;
+        
+
+        
         // 停止插值动画
-        if ((ABS(x)>PAPER_VELOCITY/2)||(leave > PAPER_RADIUS * 0.02 && paningMove.nextPageIndex >= 0 && paningMove.nextPageIndex < self.imagePathArray.count/2)) {
+        if ((ABS(x)>PAPER_VELOCITY/2)||(leave > PAPER_RADIUS * 0.02)) {
             if (paningMove.move > 0) {
                 index = index + 1;
             }
             [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:PAPER_RADIUS * index];
         }else{
+            if (paningMove.move < 0) {
+                index = index + 1;
+            }
             [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.x valueTo:PAPER_RADIUS * index];
         }
     }
