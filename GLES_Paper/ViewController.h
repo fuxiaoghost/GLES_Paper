@@ -88,15 +88,8 @@ typedef struct {
     CGPoint pinchTouch0;                        // 记录捏合手势初始位置0
     CGPoint pinchTouch1;                        // 记录捏合手势初始位置1
     float scope = 0;                            // 手指捏合、展开的尺度
+    float startScope = 0;                       // 手指捏合、展开的初始值
     float pinchSensitivity;                     // 捏合一页所需要的滑动距离
-    float theta = 0;                            // 页夹角
-    float beta = 0;                             // 旋转角
-    float zMove = 0;                            // z轴移动距离
-    float currentTheta = 0;
-    float currentBeta = 0;
-    float currentZMove = 0;
-    float process;
-    
 }PinchMove;
 
 @interface ViewController : GLKViewController{

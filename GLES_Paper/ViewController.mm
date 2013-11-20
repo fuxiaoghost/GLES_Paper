@@ -416,14 +416,27 @@
         
         // 4、照相机机位
         paperPipeline.modelViewMatrix.PushMatrix(lookAt);
-        paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + pinchMove.zMove);
+        if (pinchMove.scope < 0) {
+            paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + (1.0f) * pinchMove.scope);
+        }else{
+            paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + (abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY))) * pinchMove.scope);
+        }
+        
         
         // 3、绕y轴旋转
         float yRotate = 0;
         if (index <= self.pageIndex) {
-            yRotate = -PAPER_MAX_ANGLE + pinchMove.beta;
+            if (pinchMove.scope < 0) {
+                yRotate = -PAPER_MAX_ANGLE - pinchMove.scope * PAPER_MAX_ANGLE;
+            }else{
+                yRotate = -PAPER_MAX_ANGLE + (PAPER_MIN_ANGLE - PAPER_MAX_ANGLE) * pinchMove.scope;
+            }
         }else{
-            yRotate = PAPER_MAX_ANGLE - pinchMove.beta;
+            if (pinchMove.scope < 0) {
+                yRotate = PAPER_MAX_ANGLE + pinchMove.scope * PAPER_MAX_ANGLE;
+            }else{
+                yRotate = PAPER_MAX_ANGLE - (PAPER_MIN_ANGLE - PAPER_MAX_ANGLE) * pinchMove.scope;
+            }
         }
         paperPipeline.modelViewMatrix.Rotate(yRotate, 0, 1, 0);
         
@@ -439,15 +452,28 @@
         
         // 1、整体沿+x移动 PAPER_X_DISTANCE
         float xDistance = 0;
-        xDistance = (i/2 - self.pageIndex) * 2 * sinf(PAPER_MIN_ANGLE - pinchMove.theta);
+        if (pinchMove.scope < 0) {
+            xDistance = (i/2 - self.pageIndex) * 2 * sinf(PAPER_MIN_ANGLE + PAPER_MIN_ANGLE * pinchMove.scope);
+        }else{
+            xDistance = (i/2 - self.pageIndex) * 2 * sinf(PAPER_MIN_ANGLE);
+        }
+        
         float xOffset = (index - self.pageIndex) <= 0 ? -y : -x;
         paperPipeline.modelViewMatrix.Translate(xDistance + xOffset, 0, 0);
         
         // 0、自身旋转
         if (i % 2 != 0) {
-            paperPipeline.modelViewMatrix.Rotate(PAPER_MIN_ANGLE - pinchMove.theta, 0, 1, 0);
+            if (pinchMove.scope < 0) {
+                paperPipeline.modelViewMatrix.Rotate(PAPER_MIN_ANGLE + PAPER_MIN_ANGLE * pinchMove.scope, 0, 1, 0);
+            }else{
+                paperPipeline.modelViewMatrix.Rotate(PAPER_MIN_ANGLE, 0, 1, 0);
+            }
         }else{
-            paperPipeline.modelViewMatrix.Rotate(-PAPER_MIN_ANGLE + pinchMove.theta, 0, 1, 0);
+            if (pinchMove.scope < 0) {
+                paperPipeline.modelViewMatrix.Rotate(-PAPER_MIN_ANGLE - PAPER_MIN_ANGLE * pinchMove.scope, 0, 1, 0);
+            }else{
+                paperPipeline.modelViewMatrix.Rotate(-PAPER_MIN_ANGLE, 0, 1, 0);
+            }
         }
         
         if (shadow) {
@@ -570,92 +596,15 @@
 }
 
 #pragma mark -
-#pragma mark MoveChange
-
-
-#pragma mark -
-#pragma mark PinchChange
-// 捏合运动
-- (void) pinchChange:(float)move{
-    if(self.paperStatus == PaperUnfold){
-        if (move < 0) {
-            move = -move;
-            if (move < pinchMove.pinchSensitivity) {
-                pinchMove.theta = 0;
-                pinchMove.beta =  (PAPER_MIN_ANGLE - PAPER_MAX_ANGLE) * (1 - MIN(1.0, move/pinchMove.pinchSensitivity));
-                pinchMove.zMove = (abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY)))  * (1 - MIN(1.0, move/pinchMove.pinchSensitivity));
-            }else{
-                move = move - pinchMove.pinchSensitivity;
-                pinchMove.theta = PAPER_MIN_ANGLE * MIN(1.0-0.04,move/pinchMove.pinchSensitivity);
-                pinchMove.beta = PAPER_MAX_ANGLE * MIN(1.0-0.1, move/pinchMove.pinchSensitivity);
-                pinchMove.zMove = -1 * MIN(1.0, move/pinchMove.pinchSensitivity);
-            }
-        }else{
-            pinchMove.zMove = (abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY))) +  (tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY)) - 1.4) * MIN(1.0, move/pinchMove.pinchSensitivity);
-        }
-    }else if(self.paperStatus == PaperNormal){
-        if (move < 0) {
-            move = -move;
-            pinchMove.theta = PAPER_MIN_ANGLE * MIN(1.0-0.04,move/pinchMove.pinchSensitivity);
-            pinchMove.beta = PAPER_MAX_ANGLE * MIN(1.0-0.1, move/pinchMove.pinchSensitivity);
-            pinchMove.zMove = -1 * MIN(1.0, move/pinchMove.pinchSensitivity);
-        }else{
-            pinchMove.theta = 0;
-            pinchMove.beta = (PAPER_MIN_ANGLE - PAPER_MAX_ANGLE) * MIN(1.0, move/pinchMove.pinchSensitivity);
-            pinchMove.zMove = (abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY)))  * MIN(1.0, move/pinchMove.pinchSensitivity);
-        }
-    }
-}
-
-#pragma mark -
-#pragma mark ResetViews
-
-- (void) unfoldViewsTimes:(float)time{
-    pinchMove.process = 0.0f;
-    pinchMove.currentBeta = pinchMove.beta;
-    pinchMove.currentTheta = pinchMove.theta;
-    pinchMove.currentZMove = pinchMove.zMove;
-    
-    [pinchAnimation animateEasyOutWithDuration:time valueFrom:&pinchMove.process valueTo:1.0f completion:^(BOOL) {
-        self.paperStatus = PaperUnfold;
-        panGesture.enabled = NO;
-        pinchMove.beta = -(PAPER_MAX_ANGLE - PAPER_MIN_ANGLE);
-        pinchMove.zMove = abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(60));
-        pinchMove.theta = 0.0f;
-    } valueChanged:^(float value) {
-        pinchMove.beta = pinchMove.currentBeta + value * (-(PAPER_MAX_ANGLE - PAPER_MIN_ANGLE) - pinchMove.currentBeta);
-        pinchMove.theta = pinchMove.currentTheta + value * (0.0f - pinchMove.currentTheta);
-        pinchMove.zMove = pinchMove.currentZMove + value * ((abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(60))) - pinchMove.currentZMove);
-    }];
-}
-
-- (void) normalViewsTimes:(float)time{
-    pinchMove.process = 0.0f;
-    pinchMove.currentBeta = pinchMove.beta;
-    pinchMove.currentTheta = pinchMove.theta;
-    pinchMove.currentZMove = pinchMove.zMove;
-    
-    [pinchAnimation animateEasyOutWithDuration:time valueFrom:&pinchMove.process valueTo:1.0f completion:^(BOOL) {
-        self.paperStatus = PaperNormal;
-        panGesture.enabled = YES;
-        pinchMove.beta = 0.0f;
-        pinchMove.theta = 0.0f;
-        pinchMove.zMove = 0.0f;
-    } valueChanged:^(float value) {
-        pinchMove.beta = pinchMove.currentBeta + value * (0.0f - pinchMove.currentBeta);
-        pinchMove.theta = pinchMove.currentTheta + value * (0.0f - pinchMove.currentTheta);
-        pinchMove.zMove = pinchMove.currentZMove + value * (0.0f - pinchMove.currentZMove);
-    }];
-}
-
-#pragma mark -
 #pragma mark GestureReceive
 // 点击
 - (void) tapGestureReceive:(UITapGestureRecognizer *)recoginzer{
     if (self.paperStatus == PaperUnfold) {
-        [self normalViewsTimes:0.2];
+        [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:0.0f];
+        self.paperStatus = PaperNormal;
     }else if(self.paperStatus == PaperNormal){
-        [self unfoldViewsTimes:0.2];
+        [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:1.0f];
+        self.paperStatus = PaperUnfold;
     }
 }
 
@@ -755,7 +704,6 @@
             [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:PAPER_THETA * index];
         }
     }
-
 }
 
 
@@ -767,7 +715,7 @@
         if ([recoginzer numberOfTouches] <= 1) {
             return;
         }
-        pinchMove.scope = 0;
+        pinchMove.startScope = pinchMove.scope;
         pinchMove.isPinching = YES;
         pinchMove.pinchTouch0 = [recoginzer locationOfTouch:0 inView:self.view];
         pinchMove.pinchTouch1 = [recoginzer locationOfTouch:1 inView:self.view];
@@ -786,33 +734,36 @@
             
             CGPoint touch0 = [recoginzer locationOfTouch:0 inView:self.view];
             CGPoint touch1 = [recoginzer locationOfTouch:1 inView:self.view];
-            
-            [pinchAnimation animateEasyOutWithDuration:0.1 valueFrom:&pinchMove.scope valueTo:[self pinchLengthMoveTo:touch0 anotherPoint:touch1] completion:^(BOOL finished) {
-                
-            } valueChanged:^(float value) {
-                [self pinchChange:value];
-                NSLog(@"%f",value);
-            }];
+            float toValue = pinchMove.startScope + [self pinchLengthMoveTo:touch0 anotherPoint:touch1]/pinchMove.pinchSensitivity;
+            if (toValue < -1.0 + 0.1f) {
+                toValue = -1.0f + 0.1f;
+            }
+            if (toValue > 1.0f) {
+                toValue = 1.0f;
+            }
+            [pinchAnimation animateEasyOutWithDuration:0.1 valueFrom:&pinchMove.scope valueTo:toValue];
         }
     }
 }
 
 - (void) pinchEnd{
     if (self.paperStatus == PaperNormal) {
-        if(pinchMove.scope > pinchMove.pinchSensitivity * 0.1){
+        if(pinchMove.scope > 0.1f){
             // 展开
-            [self unfoldViewsTimes:0.2];
+            [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:1.0f];
+            self.paperStatus = PaperUnfold;
         }else{
             // 还原
-            [self normalViewsTimes:0.2];
+            [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:0.0f];
         }
     }else if(self.paperStatus == PaperUnfold){
-        if (pinchMove.scope < pinchMove.pinchSensitivity * 0.1) {
+        if (pinchMove.scope < 1.0f - 0.1f) {
             // 还原
-            [self normalViewsTimes:0.2];
+            [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:0.0f];
+            self.paperStatus = PaperNormal;
         }else{
             // 展开
-            [self unfoldViewsTimes:0.2];
+            [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:1.0f];
         }
     }
 }
