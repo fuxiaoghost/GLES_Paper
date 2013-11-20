@@ -606,9 +606,11 @@
 
 // 滑动
 - (void)paningGestureReceive:(UIPanGestureRecognizer *)recoginzer{
-    NSLog(@"%d",recoginzer.state);
+    if (self.paperStatus == PaperUnfold) {
+        return;
+    }
     
-    if (pinchMove.isPinching || self.paperStatus == PaperFold) {
+    if (pinchMove.isPinching) {
         return;
     }
 
