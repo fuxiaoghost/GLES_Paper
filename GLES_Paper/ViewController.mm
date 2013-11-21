@@ -9,7 +9,7 @@
 #import "ViewController.h"
 #import "Define.h"
 
-#define PAPER_FRAMESPERSECOND     60                            // 刷新频率
+#define PAPER_FRAMESPERSECOND     30                            // 刷新频率
 #define PAPER_MIN_ANGLE           (M_PI_4/6)                    // 书页夹角/2
 #define PAPER_MAX_ANGLE           (M_PI_4)                      // (展开书页夹角 - 书页夹角)/2
 #define PAPER_Z_DISTANCE          (-3.0f)                       // 沿z轴距离
@@ -48,7 +48,6 @@
     
     self.context = nil;
     self.imagePathArray = nil;
-    [pinchAnimation release];
     [paningAnimation release];
     
     [super dealloc];
@@ -127,7 +126,6 @@
     if (self = [super init]) {
         self.imagePathArray = [NSArray arrayWithArray:paths];
         imageCount = paths.count;
-        pinchAnimation = [[PaperAnimation alloc] init];
         paningAnimation = [[PaperAnimation alloc] init];
     }
     return self;
@@ -211,14 +209,14 @@
     // 双指捏合手势
     pinchGesture = [[[UIPinchGestureRecognizer alloc] initWithTarget:self action:@selector(pinchGestureReceive:)] autorelease];
     [self.view addGestureRecognizer:pinchGesture];
-    [pinchGesture requireGestureRecognizerToFail:panGesture];
+//    [pinchGesture requireGestureRecognizerToFail:panGesture];
     
     // 点击手势
     UITapGestureRecognizer *tapGesture = [[[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(tapGestureReceive:)] autorelease];
     [self.view addGestureRecognizer:tapGesture];
     tapGesture.numberOfTapsRequired = 1;
     tapGesture.numberOfTouchesRequired = 1;
-    [tapGesture requireGestureRecognizerToFail:panGesture];
+//    [tapGesture requireGestureRecognizerToFail:panGesture];
 }
 
 
@@ -351,13 +349,6 @@
     for (int i = 0; i < imageCount; i++) {
         paperTextures[i] = 0;
     }
-    
-//    NSInteger bufferCount = MIN(imageCount, PAPER_PAGENUM * 2);
-//    dispatch_async(dispatch_get_global_queue(0, 0), ^{
-//        for(int i = 0;i < bufferCount;i++){
-//            [self loadTextureWithId:&paperTextures[i] imageFilePath:[self.imagePathArray objectAtIndex:i]];
-//        }
-//    });
 }
 
 - (int) requestPaperTextureAtIndex:(NSInteger)index{    
@@ -605,6 +596,8 @@
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
     
+    [paningAnimation animationTimerStep:1.0/self.framesPerSecond];
+    
     // 清理画布
     glClearColor(1.0f, 1.0f, 1.0f, 1.0f);
     // 清除颜色缓冲区和深度缓冲区
@@ -623,7 +616,7 @@
     glEnable(GL_BLEND);
     glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
     // 在缓冲区绘制阴影
-    //[self drawShadows];
+    [self drawShadows];
     glDisable(GL_BLEND);
     
     // 深度读写
@@ -651,10 +644,10 @@
 // 点击
 - (void) tapGestureReceive:(UITapGestureRecognizer *)recoginzer{
     if (self.paperStatus == PaperUnfold) {
-        [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:0.0f];
+        [paningAnimation animateEasyOutWithDuration:0.4 valueFrom:&pinchMove.scope valueTo:0.0f];
         self.paperStatus = PaperNormal;
     }else if(self.paperStatus == PaperNormal){
-        [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:1.0f];
+        [paningAnimation animateEasyOutWithDuration:0.4 valueFrom:&pinchMove.scope valueTo:1.0f];
         self.paperStatus = PaperUnfold;
     }
 }
@@ -694,7 +687,7 @@
             if (toValue > PAPER_THETA * (imageCount - 1)) {
                 toValue = PAPER_THETA * (imageCount - 1);
             }
-            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:toValue];
+            [paningAnimation animateEasyOutWithDuration:0.3 valueFrom:&paningMove.theta valueTo:toValue];
         }
     }
 }
@@ -711,7 +704,7 @@
     float x = velocity;
     // 速度大于阈值进行衰减处理
     if (ABS(x) > PAPER_VELOCITY) {
-        float toValue = x * 0.2/2;      // 衰减距离
+        float toValue = x * 0.3/2;      // 衰减距离
         
         float toThetaValue = PAPER_THETA * toValue/paningMove.moveSensitivity;
         int count = (int)((toThetaValue + paningMove.theta + PAPER_PRECISION)/PAPER_THETA);
@@ -727,7 +720,7 @@
         }else if(xto < min){
             xto = min;
         }
-        [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:xto];
+        [paningAnimation animateEasyOutWithDuration:0.6 valueFrom:&paningMove.theta valueTo:xto];
     }else{
         int index = (int)((paningMove.theta + PAPER_PRECISION)/PAPER_THETA);
         
@@ -753,7 +746,7 @@
                     index = imageCount - 1;
                 }
             }
-            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:PAPER_THETA * index];
+            [paningAnimation animateEasyOutWithDuration:0.3 valueFrom:&paningMove.theta valueTo:PAPER_THETA * index];
         }else{
             if (paningMove.move < 0) {
                 index = index + 1;
@@ -761,7 +754,7 @@
                     index = imageCount - 1;
                 }
             }
-            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:PAPER_THETA * index];
+            [paningAnimation animateEasyOutWithDuration:0.3 valueFrom:&paningMove.theta valueTo:PAPER_THETA * index];
         }
     }
 }
@@ -781,7 +774,7 @@
         pinchMove.pinchTouch1 = [recoginzer locationOfTouch:1 inView:self.view];
     }else if (recoginzer.state == UIGestureRecognizerStateEnded){
         pinchMove.isPinching = NO;
-        [self performSelector:@selector(pinchEnd) withObject:nil afterDelay:0.1];
+        [self performSelector:@selector(pinchEnd) withObject:nil afterDelay:0.2];
         return;
     }else if (recoginzer.state == UIGestureRecognizerStateCancelled){
         return;
@@ -801,7 +794,7 @@
             if (toValue > 1.0f) {
                 toValue = 1.0f;
             }
-            [pinchAnimation animateEasyOutWithDuration:0.1 valueFrom:&pinchMove.scope valueTo:toValue];
+            [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:toValue];
         }
     }
 }
@@ -810,20 +803,20 @@
     if (self.paperStatus == PaperNormal) {
         if(pinchMove.scope > 0.1f){
             // 展开
-            [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:1.0f];
+            [paningAnimation animateEasyOutWithDuration:0.4 valueFrom:&pinchMove.scope valueTo:1.0f];
             self.paperStatus = PaperUnfold;
         }else{
             // 还原
-            [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:0.0f];
+            [paningAnimation animateEasyOutWithDuration:0.4 valueFrom:&pinchMove.scope valueTo:0.0f];
         }
     }else if(self.paperStatus == PaperUnfold){
         if (pinchMove.scope < 1.0f - 0.1f) {
             // 还原
-            [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:0.0f];
+            [paningAnimation animateEasyOutWithDuration:0.4 valueFrom:&pinchMove.scope valueTo:0.0f];
             self.paperStatus = PaperNormal;
         }else{
             // 展开
-            [pinchAnimation animateEasyOutWithDuration:0.2 valueFrom:&pinchMove.scope valueTo:1.0f];
+            [paningAnimation animateEasyOutWithDuration:0.4 valueFrom:&pinchMove.scope valueTo:1.0f];
         }
     }
 }

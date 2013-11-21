@@ -125,7 +125,6 @@ typedef struct {
     
     /* 插值动画 */
     PaperAnimation *paningAnimation;             // 滑动插值动画
-    PaperAnimation *pinchAnimation;              //
     
     CGSize frameSize;
     NSInteger imageCount;

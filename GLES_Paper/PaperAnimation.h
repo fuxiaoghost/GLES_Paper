@@ -17,6 +17,7 @@
     float animationTimeOffset;
     float animationTimeEnd;
     int bezierPower;
+    BOOL needStep;
 }
 - (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo;
 - (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo;
@@ -31,5 +32,6 @@
 - (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL))completion valueChanged:(void(^)(float value)) valueChanged;
 - (void) animateEasyInOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo completion:(void (^)(BOOL))completion valueChanged:(void(^)(float Z))valueChanged;
 
-- (void) stopAnimation;
+
+- (void) animationTimerStep:(float)duration;
 @end

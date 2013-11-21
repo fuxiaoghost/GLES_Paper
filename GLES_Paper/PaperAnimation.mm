@@ -7,17 +7,15 @@
 //
 
 
-#define STEPSPERSECOND 60
-
 #import "PaperAnimation.h"
+#import <QuartzCore/QuartzCore.h>
+
 @interface PaperAnimation()
-@property (nonatomic,retain) NSTimer *animationTimer;
 @property (nonatomic,copy) void (^completion)(BOOL finished);
 @property (nonatomic,copy) void (^valueChanged)(float value);
 @end
 
 @implementation PaperAnimation
-@synthesize animationTimer;
 
 - (void) dealloc{
     self.completion = nil;
@@ -27,8 +25,6 @@
 
 
 - (void) stopAnimation{
-    [self.animationTimer invalidate];
-    self.animationTimer = nil;
     self.valueChanged = nil;
 }
 
@@ -50,14 +46,7 @@
     animationValueTo = valueTo;
     animationValueBy = *valueFrom;
     bezierPower = 2;
-    
-    if (!self.animationTimer) {
-        self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/STEPSPERSECOND
-                                                               target:self
-                                                             selector:@selector(animationTimerStep)
-                                                             userInfo:nil
-                                                              repeats:YES];
-    }
+    needStep = YES;
 }
 
 - (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
@@ -76,15 +65,7 @@
     animationValueTo = valueTo;
     animationValueBy = valueTo;
     bezierPower = 2;
-
-   
-    if (!self.animationTimer) {
-        self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/STEPSPERSECOND
-                                                               target:self
-                                                             selector:@selector(animationTimerStep)
-                                                             userInfo:nil
-                                                              repeats:YES];
-    }
+    needStep = YES;
 }
 
 - (void) animateEasyInOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
@@ -103,15 +84,7 @@
     animationValueTo = valueTo;
     animationValueBy = valueTo;
     bezierPower = 3;
-    
-    
-    if (!self.animationTimer) {
-        self.animationTimer = [NSTimer scheduledTimerWithTimeInterval:1.0/STEPSPERSECOND
-                                                               target:self
-                                                             selector:@selector(animationTimerStep)
-                                                             userInfo:nil
-                                                              repeats:YES];
-    }
+    needStep = YES;
 }
 
 #pragma mark -
@@ -160,16 +133,18 @@
     self.valueChanged = valueChanged;
 }
 
-- (void) animationTimerStep{
-    animationTimeOffset += (1.0/STEPSPERSECOND);
+- (void) animationTimerStep:(float)duration{
+    if (!needStep) {
+        return;
+    }
+    animationTimeOffset += duration;
     if (animationTimeOffset >= animationTimeEnd) {
         *animationValue = animationValueTo;
-        [self.animationTimer invalidate];
-        self.animationTimer = nil;
         if (self.completion) {
             self.completion(YES);
             self.completion = nil;
         }
+        needStep = NO;
     }else{
         float t = (animationTimeOffset)/animationTimeEnd;
         if (bezierPower == 2) {

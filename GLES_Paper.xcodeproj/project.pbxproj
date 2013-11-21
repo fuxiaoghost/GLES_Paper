@@ -63,7 +63,6 @@
 		79A2B25E1814D45C0091CBAA /* Default@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 79A2B25D1814D45C0091CBAA /* Default@2x.png */; };
 		79A2B2601814D45C0091CBAA /* Default-568h@2x.png in Resources */ = {isa = PBXBuildFile; fileRef = 79A2B25F1814D45C0091CBAA /* Default-568h@2x.png */; };
 		79A2B2671814D45C0091CBAA /* ViewController.mm in Sources */ = {isa = PBXBuildFile; fileRef = 79A2B2661814D45C0091CBAA /* ViewController.mm */; };
-		79C1D8D01823B38A00F4C789 /* paperTexture.png in Resources */ = {isa = PBXBuildFile; fileRef = 79C1D8CF1823B38A00F4C789 /* paperTexture.png */; };
 		79E925671815024600707886 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 79E925661815024600707886 /* QuartzCore.framework */; };
 		DD25BB55181FEAC000158950 /* PaperFlatLight.vsh in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */; };
 		DD25BB56181FEAC000158950 /* PaperFlatLight.fsh in Resources */ = {isa = PBXBuildFile; fileRef = DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */; };
@@ -149,7 +148,6 @@
 		79A2B2651814D45C0091CBAA /* ViewController.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = ViewController.h; sourceTree = "<group>"; };
 		79A2B2661814D45C0091CBAA /* ViewController.mm */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.cpp.objcpp; path = ViewController.mm; sourceTree = "<group>"; };
 		79A2B2781814D62A0091CBAA /* Define.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = Define.h; sourceTree = "<group>"; };
-		79C1D8CF1823B38A00F4C789 /* paperTexture.png */ = {isa = PBXFileReference; lastKnownFileType = image.png; path = paperTexture.png; sourceTree = "<group>"; };
 		79E925661815024600707886 /* QuartzCore.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = QuartzCore.framework; path = System/Library/Frameworks/QuartzCore.framework; sourceTree = SDKROOT; };
 		DD25BB51181FEA9000158950 /* PaperFlatLight.vsh */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.vsh; sourceTree = "<group>"; };
 		DD25BB53181FEAA100158950 /* PaperFlatLight.fsh */ = {isa = PBXFileReference; explicitFileType = sourcecode.glsl; fileEncoding = 4; path = PaperFlatLight.fsh; sourceTree = "<group>"; };
@@ -216,7 +214,6 @@
 				79261E45183DC426005B8ABF /* image_34.jpeg */,
 				DD735FFB182E6C4E00D57B4E /* shadow.png */,
 				DD6C2DA21824012A00B51778 /* sex.png */,
-				79C1D8CF1823B38A00F4C789 /* paperTexture.png */,
 			);
 			path = Textures;
 			sourceTree = "<group>";
@@ -400,7 +397,6 @@
 				79A2B25E1814D45C0091CBAA /* Default@2x.png in Resources */,
 				DD735FFC182E6C4E00D57B4E /* shadow.png in Resources */,
 				79A2B2601814D45C0091CBAA /* Default-568h@2x.png in Resources */,
-				79C1D8D01823B38A00F4C789 /* paperTexture.png in Resources */,
 				79261E46183DC426005B8ABF /* image_0.jpeg in Resources */,
 				79261E47183DC426005B8ABF /* image_1.jpeg in Resources */,
 				79261E48183DC426005B8ABF /* image_2.jpeg in Resources */,
