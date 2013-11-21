@@ -30,7 +30,6 @@
     [self.animationTimer invalidate];
     self.animationTimer = nil;
     self.valueChanged = nil;
-    NSLog(@"Animation stop");
 }
 
 #pragma mark -
@@ -171,7 +170,6 @@
             self.completion(YES);
             self.completion = nil;
         }
-        NSLog(@"Animation end of time out");
     }else{
         float t = (animationTimeOffset)/animationTimeEnd;
         if (bezierPower == 2) {

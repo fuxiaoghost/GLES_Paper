@@ -45,11 +45,12 @@ typedef struct {
     GLint shaderId;                             // 着色器ID
 }PaperFlatLightShader;
 
+// 书页着色器
 typedef struct {
     GLint mvpMatrix;                            // 投影矩阵
     GLint mvMatrix;                             // 模型矩阵
     GLint colorMap;                             // 纹理ID
-    GLint shaderId;
+    GLint shaderId;                             // 着色器ID
 }PaperShadowShader;
 
 // 背景着色器
@@ -59,42 +60,40 @@ typedef struct {
     GLint mvsMatrix;                            // 影子的投影矩阵
     GLint normalMatrix;                         // 法线矩阵
     GLint lightPosition;                        // 光源位置
-    GLint lightColor;                           // 光
+    GLint lightColor;                           // 光源颜色
     GLint shadowMap;                            // 阴影纹理ID
     GLint shaderId;                             // 着色器ID
 }BackgroundFlatLightShader;
 
 // 变换管线
 typedef struct {
-    GLMatrixStack modelViewMatrix;              // 模型矩阵
-    GLMatrixStack projectionMatrix;             // 投影矩阵
+    GLMatrixStack       modelViewMatrix;        // 模型矩阵
+    GLMatrixStack       projectionMatrix;       // 投影矩阵
     GLGeometryTransform transformPipeline;      // 变换管线
-    GLFrustum     viewFrustum;                  // 透视
+    GLFrustum           viewFrustum;            // 透视
 }TransformPipeline;
 
 // 翻页动作
 typedef struct {
-    float theta = 0;                            // 翻页时活动页旋转的角度
-    float startTheta = 0;                       // 翻页前记录旋转角度
-    float pageRemainder = 0;                    // 翻页时的进度
-    BOOL isMoving = NO;                         // 单手滑动翻页，是否正在移动
-    float moveSensitivity;                      // 翻一页所需要的滑动距离
-    float move = 0.0f;                          // 当前已经滑动的距离
+    float theta             = 0.0f;             // 翻页时活动页旋转的角度
+    float startTheta        = 0.0f;             // 翻页前记录旋转角度
+    BOOL  isMoving          = NO;               // 单手滑动翻页，是否正在移动
+    float moveSensitivity   = 0.0f;             // 翻一页所需要的滑动距离
+    float move              = 0.0f;             // 当前已经滑动的距离
 }PaningMove;
 
 // 捏合动作
 typedef struct {
-    BOOL isPinching = NO;                       // 双手捏合，是否正在移动
+    BOOL    isPinching          = NO;           // 双手捏合，是否正在移动
     CGPoint pinchTouch0;                        // 记录捏合手势初始位置0
     CGPoint pinchTouch1;                        // 记录捏合手势初始位置1
-    float scope = 0;                            // 手指捏合、展开的尺度
-    float startScope = 0;                       // 手指捏合、展开的初始值
-    float pinchSensitivity;                     // 捏合一页所需要的滑动距离
+    float   scope               = 0.0f;         // 手指捏合、展开的尺度
+    float   startScope          = 0.0f;         // 手指捏合、展开的初始值
+    float   pinchSensitivity    = 0.0f;         // 捏合所需要移动的距离
 }PinchMove;
 
 @interface ViewController : GLKViewController{
 @private
-    float angel;
     GLShaderManager     shaderManager;          // 着色器
     
     /* 绘图批次 */
@@ -104,18 +103,18 @@ typedef struct {
     /* 绘图纹理 */
     GLuint   paperTexture;                      // 书页纹理
     GLuint   shadowTexture;
+    GLuint   *paperTextures;                    // 书页纹理数组
     
     /* 着色器 */
     PaperFlatLightShader paperFlatLightShader;              // 书页着色器
     BackgroundFlatLightShader backgroundFlatLightShader;    // 背景着色器
     PaperShadowShader paperShadowShader;                    // 书页阴影
 
-    
     /* 变换管线 */
     TransformPipeline backgroundPipeline;       // 背景的变换管线
     TransformPipeline paperPipeline;            // 书页的变换管线
     
-    
+    /* 手势 */
     UIPanGestureRecognizer *panGesture;         // 手指滑动手势
     UIPinchGestureRecognizer *pinchGesture;     // 手指捏合手势
     
@@ -128,13 +127,10 @@ typedef struct {
     PaperAnimation *paningAnimation;             // 滑动插值动画
     PaperAnimation *pinchAnimation;              //
     
-    CStopWatch stopWatch;                       // 停表
-    
     CGSize frameSize;
-    
-    bool animating;
+    NSInteger imageCount;
 }
 - (id) initWithImagePaths:(NSArray *)paths;
--(void) changeSize:(CGSize)size;
+- (void) changeSize:(CGSize)size;
 @property (nonatomic,assign) NSInteger pageIndex;
 @end

@@ -24,8 +24,9 @@
     self.window = [[[UIWindow alloc] initWithFrame:[[UIScreen mainScreen] bounds]] autorelease];
 
     NSMutableArray *array = [NSMutableArray arrayWithCapacity:0];
-    for (int i = 0; i < 20; i++) {
-        [array addObject:@""];
+    for (int i = 0; i < 35; i++) {
+        NSString *path = [[NSBundle mainBundle] pathForResource:[NSString stringWithFormat:@"image_%d",i] ofType:@"jpeg"];
+        [array addObject:path];
     }
     self.viewController = [[[ViewController alloc] initWithImagePaths:array] autorelease];
     self.viewController.pageIndex = 0;

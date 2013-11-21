@@ -9,35 +9,35 @@
 #import "ViewController.h"
 #import "Define.h"
 
-#define PAPER_FRAMESPERSECOND     60                // 刷新频率
-#define PAPER_MIN_ANGLE           (M_PI_4/6)            // 书页夹角/2
-#define PAPER_MAX_ANGLE           (M_PI_4)              // (展开书页夹角 - 书页夹角)/2
-#define PAPER_Z_DISTANCE          (-3.0f)           // 沿z轴距离
-#define PAPER_Z_MIN_DISTANCE      1.0f              // 最小z轴距离
-#define PAPER_Z_MAX_DISTANCE      (-10.0f)          // 最大z轴距离
-#define PAPER_PERSPECTIVE_NEAR    1.0f              // 透视场近端
-#define PAPER_PERSPECTIVE_FAR     20.0f           // 透视场远端
-#define PAPER_PERSPECTIVE_FOVY    60.0f
-#define PAPER_ROTATION_RADIUS     0.3f              // 整体的大圆圈的旋转半径
-#define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE) // 沿x轴距离
-#define PAPER_RADIUS              (2 * PAPER_X_DISTANCE)
-#define PAPER_VELOCITY            1000              // 滑动速度的阈值
-#define PAPER_THETA               (M_PI - 2 * PAPER_MAX_ANGLE)
-
-
+#define PAPER_FRAMESPERSECOND     60                            // 刷新频率
+#define PAPER_MIN_ANGLE           (M_PI_4/6)                    // 书页夹角/2
+#define PAPER_MAX_ANGLE           (M_PI_4)                      // (展开书页夹角 - 书页夹角)/2
+#define PAPER_Z_DISTANCE          (-3.0f)                       // 沿z轴距离
+#define PAPER_Z_MIN_DISTANCE      1.0f                          // 最小z轴距离
+#define PAPER_PERSPECTIVE_NEAR    1.0f                          // 透视场近端
+#define PAPER_PERSPECTIVE_FAR     20.0f                         // 透视场远端
+#define PAPER_PERSPECTIVE_FOVY    60.0f                         // 透视仰角
+#define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE)         // 沿x轴距离
+#define PAPER_RADIUS              (2 * PAPER_X_DISTANCE)        // 绕轴旋转半径
+#define PAPER_VELOCITY            1000                          // 滑动速度的阈值，超过此速度则进行减速衰减
+#define PAPER_THETA               (M_PI - 2 * PAPER_MAX_ANGLE)  // 翻页的角度
+#define PAPER_PRECISION           0.00001                      // 纠偏精度，防止float to int时出现偏差
+#define PAPER_PAGENUM             5                             // 裁剪边界值，没一边的书页超过次数进行裁剪处理
 
 @interface ViewController () {
 
 }
-@property (nonatomic,retain) NSArray *imagePathArray;        // 图片地址
-@property (retain, nonatomic) EAGLContext *context;
-@property (nonatomic,retain) UILabel *debugLabel;
-@property (nonatomic,assign) PaperStatus paperStatus;           // 书页的当前状态(PaperNormal,PaperUnfold,PaperFold)
+@property (nonatomic, retain) NSArray *imagePathArray;           // 图片地址
+@property (nonatomic, retain) EAGLContext *context;
+@property (nonatomic, assign) PaperStatus paperStatus;           // 书页的当前状态(PaperNormal,PaperUnfold,PaperFold)
 - (void)setupGL;
 - (void)tearDownGL;
 @end
 
 @implementation ViewController
+
+#pragma mark -
+#pragma mark 内存管理
 
 - (void)dealloc{
     [self tearDownGL];
@@ -46,9 +46,8 @@
         [EAGLContext setCurrentContext:nil];
     }
     
-    [_context release];
+    self.context = nil;
     self.imagePathArray = nil;
-    self.debugLabel = nil;
     [pinchAnimation release];
     [paningAnimation release];
     
@@ -67,8 +66,6 @@
             [EAGLContext setCurrentContext:nil];
         }
         self.context = nil;
-        self.debugLabel = nil;
-        
     }
 }
 
@@ -79,17 +76,32 @@
     // delete shaders
     glDeleteProgram(paperFlatLightShader.shaderId);
     glDeleteProgram(backgroundFlatLightShader.shaderId);
+    glDeleteProgram(paperShadowShader.shaderId);
     
     // delete textures
     glDeleteTextures(1, &paperTexture);
+    glDeleteTextures(1, &shadowTexture);
+    if (paperTextures != NULL) {
+        for (int i = 0; i < imageCount; i++) {
+            if (paperTextures[i] != 0) {
+                glDeleteTextures(1, &paperTextures[i]);
+            }
+        }
+    }
     
     // delete batchs
     if (paperBatchs != NULL) {
         delete [] paperBatchs;
         paperBatchs = NULL;
     }
+    if (paperTextures != NULL) {
+        delete [] paperTextures;
+        paperTextures = NULL;
+    }
 }
 
+#pragma mark -
+#pragma mark 数据初始化
 
 - (void)setupGL{
     [EAGLContext setCurrentContext:self.context];
@@ -102,25 +114,63 @@
     // 图片纹理
     [self loadTextureWithId:&paperTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"sex" ofType:@"png"]];
     [self loadTextureWithId:&shadowTexture imageFilePath:[[NSBundle mainBundle] pathForResource:@"shadow" ofType:@"png"]];
-    // 阴影纹理和FBO
-    //[self createShadowTexture];
-    // 阴影模糊纹理和FBO
-    //[self createBlurTexture];
+    [self createPapaerTextures];
     
     // 准备渲染图形的批次
     [self createPaperBatchArray];       // papers
     [self createBackgroundBatch];
-    //[self createBlurBatch];
 }
+
+
 
 - (id) initWithImagePaths:(NSArray *)paths{
     if (self = [super init]) {
-        self.imagePathArray = paths;
-        angel = 0;
+        self.imagePathArray = [NSArray arrayWithArray:paths];
+        imageCount = paths.count;
         pinchAnimation = [[PaperAnimation alloc] init];
         paningAnimation = [[PaperAnimation alloc] init];
     }
     return self;
+}
+
+- (void)viewDidLoad{
+    [super viewDidLoad];
+    self.paperStatus = PaperNormal;
+    
+    
+    // EAGL上下文
+    self.context = [[[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2] autorelease];
+    if (!self.context) {
+        NSLog(@"Failed to create ES context");
+    }
+    
+    // 刷新频率
+    self.preferredFramesPerSecond = PAPER_FRAMESPERSECOND;
+    
+    // GL渲染容器层
+    GLKView *view = (GLKView *)self.view;
+    view.context = self.context;
+    view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
+    view.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
+    view.drawableMultisample = GLKViewDrawableMultisample4X;
+    
+    
+    
+    // 设置Size
+    if (([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationLandscapeLeft) || ([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationLandscapeRight)) {
+        CGSize size = CGSizeMake(SCREEN_HEIGHT,SCREEN_WIDTH);
+        [self changeSize:size];
+    }else{
+        CGSize size = CGSizeMake(SCREEN_WIDTH, SCREEN_HEIGHT);
+        
+        [self changeSize:size];
+    }
+    
+    // GL初始化配置
+    [self setupGL];
+    
+    // 添加手势
+    [self addGesture];
 }
 
 -(void) changeSize:(CGSize)size{
@@ -150,55 +200,6 @@
     
 }
 
-- (void)viewDidLoad{
-    [super viewDidLoad];
-    self.paperStatus = PaperNormal;
-    
-    
-    // EAGL上下文
-    self.context = [[[EAGLContext alloc] initWithAPI:kEAGLRenderingAPIOpenGLES2] autorelease];
-    if (!self.context) {
-        NSLog(@"Failed to create ES context");
-    }
-    
-    // 刷新频率
-    self.preferredFramesPerSecond = PAPER_FRAMESPERSECOND;
-    
-    
-    // debuglabel
-    self.debugLabel = [[[UILabel alloc] initWithFrame:CGRectMake(20,20,100,30)] autorelease];
-    self.debugLabel.backgroundColor = [UIColor clearColor];
-    self.debugLabel.textColor = [UIColor whiteColor];
-    self.debugLabel.font = [UIFont boldSystemFontOfSize:20.0f];
-    self.debugLabel.textAlignment = NSTextAlignmentCenter;
-    [self.view addSubview:self.debugLabel];
-    
-    // GL渲染容器层
-    GLKView *view = (GLKView *)self.view;
-    view.context = self.context;
-    view.drawableDepthFormat = GLKViewDrawableDepthFormat24;
-    view.drawableColorFormat = GLKViewDrawableColorFormatRGBA8888;
-    view.drawableMultisample = GLKViewDrawableMultisample4X;
-    
-    
-    
-    // 设置Size
-    if (([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationLandscapeLeft) || ([[UIApplication sharedApplication]statusBarOrientation] == UIInterfaceOrientationLandscapeRight)) {
-        CGSize size = CGSizeMake(SCREEN_HEIGHT,SCREEN_WIDTH);
-        [self changeSize:size];
-    }else{
-        CGSize size = CGSizeMake(SCREEN_WIDTH, SCREEN_HEIGHT);
-        
-        [self changeSize:size];
-    }
-    
-    // GL初始化配置
-    [self setupGL];
-    
-    // 添加手势
-    [self addGesture];
-}
-
 - (void) addGesture{
     // 滑动翻页手势
     panGesture = [[[UIPanGestureRecognizer alloc]initWithTarget:self action:@selector(paningGestureReceive:)]autorelease];
@@ -220,6 +221,8 @@
     [tapGesture requireGestureRecognizerToFail:panGesture];
 }
 
+
+
 #pragma mark -
 #pragma mark 创建渲染图形的批次
 // 创建所有的Paper批次
@@ -229,9 +232,9 @@
         delete [] paperBatchs;
         paperBatchs = NULL;
     }
-    paperBatchs = new GLBatch[self.imagePathArray.count];
+    paperBatchs = new GLBatch[imageCount * 2];
     float z = 1.0f;
-    for (int i = 0; i < self.imagePathArray.count; i++) {
+    for (int i = 0; i < imageCount * 2; i++) {
         if (i % 2 == 0) {
             // 奇数位翻转
             paperBatchs[i].Begin(GL_TRIANGLE_STRIP, 4,1);
@@ -342,8 +345,46 @@
     [texData release];
 }
 
+- (void) createPapaerTextures{
+    paperTextures = new GLuint[imageCount];
+    // 初始化
+    for (int i = 0; i < imageCount; i++) {
+        paperTextures[i] = 0;
+    }
+    
+//    NSInteger bufferCount = MIN(imageCount, PAPER_PAGENUM * 2);
+//    dispatch_async(dispatch_get_global_queue(0, 0), ^{
+//        for(int i = 0;i < bufferCount;i++){
+//            [self loadTextureWithId:&paperTextures[i] imageFilePath:[self.imagePathArray objectAtIndex:i]];
+//        }
+//    });
+}
 
-// 构造需要的着色器
+- (int) requestPaperTextureAtIndex:(NSInteger)index{    
+    NSInteger bufferCount = MIN(imageCount, PAPER_PAGENUM * 2);
+   
+    if (paperTextures[index] == 0) {
+        dispatch_async(dispatch_get_main_queue(), ^{
+            [self loadTextureWithId:&paperTextures[index] imageFilePath:[self.imagePathArray objectAtIndex:index]];
+        });
+        
+        for (int i = 0; i < imageCount; i++) {
+            if (i < self.pageIndex - bufferCount/2 || i > bufferCount/2 + self.pageIndex) {
+                if (paperTextures[i] != 0) {
+                    glDeleteTextures(1, &paperTextures[i]);
+                    paperTextures[i] = 0;
+                }
+            }
+        }
+        return paperTexture;
+    }else{
+        return paperTextures[index];
+    }
+}
+
+#pragma mark -
+#pragma mark 构造需要的着色器
+
 - (void) initShaders{
     
     // paper shader
@@ -351,7 +392,6 @@
     const char *fp = [[[NSBundle mainBundle] pathForResource:@"PaperFlatLight" ofType:@"fsh"] cStringUsingEncoding:NSUTF8StringEncoding];
     paperFlatLightShader.shaderId = shaderManager.LoadShaderPairWithAttributes(vp, fp, 3, GLT_ATTRIBUTE_VERTEX, "vVertex",GLT_ATTRIBUTE_NORMAL, "vNormal",GLT_ATTRIBUTE_TEXTURE0,"vTexCoord");
     
-
 	paperFlatLightShader.mvpMatrix = glGetUniformLocation(paperFlatLightShader.shaderId, "mvpMatrix");
 	paperFlatLightShader.mvMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "mvMatrix");
 	paperFlatLightShader.normalMatrix  = glGetUniformLocation(paperFlatLightShader.shaderId, "normalMatrix");
@@ -392,7 +432,7 @@
 #pragma mark 绘图
 // 绘制所有的书页
 - (void) drawPapersLookAt:(M3DMatrix44f)lookAt shadow:(BOOL)shadow{
-    self.pageIndex = ((int)((paningMove.theta + 0.000001)/ PAPER_THETA));
+    self.pageIndex = ((int)((paningMove.theta + PAPER_PRECISION)/ PAPER_THETA));
     
     // 
     float theta = ABS(paningMove.theta - PAPER_THETA * self.pageIndex);
@@ -408,13 +448,25 @@
     }
     
     // 奇数旋转-PAPER_MIN_ANGLE；偶数旋转PAPER_MIN_ANGLE
-    for (int i = 0; i < self.imagePathArray.count ; i++) {
+    for (int i = 0; i < imageCount * 2 ; i++) {
         NSInteger index = (i % 2 == 0 ? i/2 : (i + 1)/2);
+        
+        // 裁剪多余书页
+        if (index - self.pageIndex < 0) {
+            if (self.pageIndex - index >= PAPER_PAGENUM) {
+                continue;
+            }
+        }else{
+            if (index - self.pageIndex >= PAPER_PAGENUM + 2) {
+                continue;
+            }
+        }
+        
         
         // 4、照相机机位
         paperPipeline.modelViewMatrix.PushMatrix(lookAt);
         if (pinchMove.scope < 0) {
-            paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + (1.0f) * pinchMove.scope);
+            paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + PAPER_Z_MIN_DISTANCE * pinchMove.scope);
         }else{
             paperPipeline.modelViewMatrix.Translate(0, 0, PAPER_Z_DISTANCE + (abs(PAPER_Z_DISTANCE) - tanf(m3dDegToRad(PAPER_PERSPECTIVE_FOVY))) * pinchMove.scope);
         }
@@ -454,9 +506,21 @@
         }else{
             xDistance = (i/2 - self.pageIndex) * 2 * sinf(PAPER_MIN_ANGLE);
         }
-        
         float xOffset = (index - self.pageIndex) <= 0 ? -y : -x;
-        paperPipeline.modelViewMatrix.Translate(xDistance + xOffset, 0, 0);
+        
+        // 隐藏多余的书页
+        float zOffset = 0.0f;
+        if (index - self.pageIndex < 0) {
+            if (self.pageIndex - index >= PAPER_PAGENUM-1) {
+                zOffset = -theta * 0.08;
+            }
+        }else{
+            if (index - self.pageIndex >= PAPER_PAGENUM+1) {
+                zOffset = -(PAPER_THETA - theta) * 0.08;
+            }
+        }
+
+        paperPipeline.modelViewMatrix.Translate(xDistance + xOffset, 0, zOffset);
         
         // 0、自身旋转
         if (i % 2 != 0) {
@@ -496,7 +560,7 @@
             glUniformMatrix3fv(paperFlatLightShader.normalMatrix, 1, GL_FALSE, paperPipeline.transformPipeline.GetNormalMatrix());
             glUniform1f(paperFlatLightShader.radiusZ, 0.06);
             glUniform1f(paperFlatLightShader.radiusY, 0.06 * frameSize.width/frameSize.height);
-            if (i == 0 || i == self.imagePathArray.count - 1) {
+            if (i == 0 || i == imageCount * 2 - 1) {
                 glUniform1i(paperFlatLightShader.backHide, 0);
             }else{
                 glUniform1i(paperFlatLightShader.backHide, 1);
@@ -514,7 +578,8 @@
             glUniform1f(paperFlatLightShader.colorMap, 0);
             
             // 纹理
-            glBindTexture(GL_TEXTURE_2D, paperTexture);
+            NSInteger tindex = (i % 2 == 0 ? i/2 : (i - 1)/2);
+            glBindTexture(GL_TEXTURE_2D, [self requestPaperTextureAtIndex:tindex]);
             
             paperBatchs[i].Draw();
         }
@@ -523,11 +588,6 @@
     }
 }
 - (void) drawPapers{
-    // 启用深度测试
-    glEnable(GL_DEPTH_TEST);
-    
-    //return;
-    
     M3DMatrix44f lookAt;
     m3dLoadIdentity44(lookAt);
     [self drawPapersLookAt:lookAt shadow:NO];
@@ -537,9 +597,8 @@
 - (void) drawShadows{
    // create the projection matrix from the cameras view
     static const GLKVector3 kLightPosition = {0.0, 0.0, 0.0 };      // 观察点
-    static const GLKVector3 kLightLookAt = { 0, 0.04, -1.0 };     // 中心点
+    static const GLKVector3 kLightLookAt = { 0, 0.04, -1.0 };       // 中心点
     GLKMatrix4 cameraViewMatrix = GLKMatrix4MakeLookAt(kLightPosition.x, kLightPosition.y, kLightPosition.z, kLightLookAt.x, kLightLookAt.y, kLightLookAt.z, 0, 1, 0);
-    
     
     [self drawPapersLookAt:cameraViewMatrix.m shadow:YES];
 }
@@ -575,9 +634,6 @@
     
     // 绘制书页
     [self drawPapers];
-    
-    
-    self.debugLabel.text = [NSString stringWithFormat:@"%d f/s",self.framesPerSecond];
 }
 
 
@@ -635,8 +691,8 @@
             if (toValue < 0.0f) {
                 toValue = 0.0f;
             }
-            if (toValue > PAPER_THETA * (self.imagePathArray.count/2 - 1)) {
-                toValue = PAPER_THETA * (self.imagePathArray.count/2 - 1);
+            if (toValue > PAPER_THETA * (imageCount - 1)) {
+                toValue = PAPER_THETA * (imageCount - 1);
             }
             [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:toValue];
         }
@@ -656,14 +712,14 @@
     // 速度大于阈值进行衰减处理
     if (ABS(x) > PAPER_VELOCITY) {
         float toValue = x * 0.2/2;      // 衰减距离
-        // 保证衰减结果为整数
-        int count = (int)((paningMove.move + toValue)/paningMove.moveSensitivity);
-        toValue = count * paningMove.moveSensitivity;
-        float theta = [self changeMoveToTheta:toValue]; // 角度换算
+        
+        float toThetaValue = PAPER_THETA * toValue/paningMove.moveSensitivity;
+        int count = (int)((toThetaValue + paningMove.theta + PAPER_PRECISION)/PAPER_THETA);
+        float theta = count * PAPER_THETA;
         
         float min = 0;
-        float max = PAPER_THETA * (self.imagePathArray.count/2 - 1);
-        float xto = theta + paningMove.startTheta;
+        float max = PAPER_THETA * (imageCount - 1);
+        float xto = theta;
         
         // 限定两个极限点
         if (xto > max) {
@@ -673,14 +729,14 @@
         }
         [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:xto];
     }else{
-        int index = (int)(paningMove.theta/PAPER_THETA);
+        int index = (int)((paningMove.theta + PAPER_PRECISION)/PAPER_THETA);
         
         // 控制两个极限点
         if (paningMove.theta < 0) {
             index = 0;
         }
-        if (index > self.imagePathArray.count/2 - 1) {
-            index = self.imagePathArray.count/2 - 1;
+        if (index > imageCount - 1) {
+            index = imageCount - 1;
         }
         
         // 左右翻页的监测点
@@ -693,11 +749,17 @@
         if ((ABS(x)>PAPER_VELOCITY/2)||(leave > PAPER_THETA * 0.1)) {
             if (paningMove.move > 0) {
                 index = index + 1;
+                if (index > imageCount - 1) {
+                    index = imageCount - 1;
+                }
             }
             [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:PAPER_THETA * index];
         }else{
             if (paningMove.move < 0) {
                 index = index + 1;
+                if (index > imageCount - 1) {
+                    index = imageCount - 1;
+                }
             }
             [paningAnimation animateEasyOutWithDuration:0.2 valueFrom:&paningMove.theta valueTo:PAPER_THETA * index];
         }
