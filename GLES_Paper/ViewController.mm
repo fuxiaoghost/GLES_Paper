@@ -595,7 +595,7 @@
 }
 
 - (void)glkView:(GLKView *)view drawInRect:(CGRect)rect{
-    
+    // 
     [paningAnimation animationTimerStep:1.0/self.framesPerSecond];
     
     // 清理画布
@@ -611,10 +611,10 @@
     // 深度只读
     glDepthMask(GL_FALSE);
     
-    
     // 启用混合
     glEnable(GL_BLEND);
     glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
+    
     // 在缓冲区绘制阴影
     [self drawShadows];
     glDisable(GL_BLEND);
@@ -651,7 +651,6 @@
         self.paperStatus = PaperUnfold;
     }
 }
-
 
 // 滑动
 - (void)paningGestureReceive:(UIPanGestureRecognizer *)recoginzer{
