@@ -34,4 +34,8 @@
 
 
 - (void) animationTimerStep:(float)duration;
+
+@property (nonatomic,copy) void (^completion)(BOOL finished);
+@property (nonatomic,copy) void (^valueChanged)(float value);
+@property (nonatomic,copy) void (^begin)(BOOL finished);
 @end

@@ -19,7 +19,7 @@
 #define PAPER_PERSPECTIVE_FOVY    60.0f                         // 透视仰角
 #define PAPER_X_DISTANCE          sinf(PAPER_MIN_ANGLE)         // 沿x轴距离
 #define PAPER_RADIUS              (2 * PAPER_X_DISTANCE)        // 绕轴旋转半径
-#define PAPER_VELOCITY            1000                          // 滑动速度的阈值，超过此速度则进行减速衰减
+#define PAPER_VELOCITY            3000                          // 滑动速度的阈值，超过此速度则进行减速衰减
 #define PAPER_THETA               (M_PI - 2 * PAPER_MAX_ANGLE)  // 翻页的角度
 #define PAPER_PRECISION           0.00001                      // 纠偏精度，防止float to int时出现偏差
 #define PAPER_PAGENUM             5                             // 裁剪边界值，没一边的书页超过次数进行裁剪处理
@@ -703,6 +703,8 @@
     float x = velocity;
     // 速度大于阈值进行衰减处理
     if (ABS(x) > PAPER_VELOCITY) {
+        NSLog(@"%f",ABS(x));
+        
         float toValue = x * 0.3/2;      // 衰减距离
         
         float toThetaValue = PAPER_THETA * toValue/paningMove.moveSensitivity;
@@ -738,7 +740,7 @@
         }
         
         // 如果加速度大于PAPER_VELOCITY/2 或者 超过PAPER_THETA * 0.1 翻页，否则归位
-        if ((ABS(x)>PAPER_VELOCITY/2)||(leave > PAPER_THETA * 0.1)) {
+        if ((ABS(x)>PAPER_VELOCITY/4)||(leave > PAPER_THETA * 0.1)) {
             if (paningMove.move > 0) {
                 index = index + 1;
                 if (index > imageCount - 1) {

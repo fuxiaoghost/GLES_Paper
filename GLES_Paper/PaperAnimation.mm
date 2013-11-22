@@ -11,8 +11,7 @@
 #import <QuartzCore/QuartzCore.h>
 
 @interface PaperAnimation()
-@property (nonatomic,copy) void (^completion)(BOOL finished);
-@property (nonatomic,copy) void (^valueChanged)(float value);
+
 @end
 
 @implementation PaperAnimation
@@ -20,17 +19,23 @@
 - (void) dealloc{
     self.completion = nil;
     self.valueChanged = nil;
+    self.begin = nil;
     [super dealloc];
 }
 
 
 - (void) stopAnimation{
+    self.completion = nil;
     self.valueChanged = nil;
+    self.begin = nil;
 }
 
 #pragma mark -
 #pragma mark BaseAnimation
 - (void) animateEasyInWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
+    if (self.begin) {
+        self.begin(YES);
+    }
     if (self.completion) {
         self.completion(YES);
         self.completion = nil;
@@ -50,6 +55,9 @@
 }
 
 - (void) animateEasyOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
+    if (self.begin) {
+        self.begin(YES);
+    }
     if (self.completion) {
         self.completion(YES);
         self.completion = nil;
@@ -69,6 +77,9 @@
 }
 
 - (void) animateEasyInOutWithDuration:(NSTimeInterval)time valueFrom:(float *)valueFrom valueTo:(float)valueTo{
+    if (self.begin) {
+        self.begin(YES);
+    }
     if (self.completion) {
         self.completion(YES);
         self.completion = nil;
