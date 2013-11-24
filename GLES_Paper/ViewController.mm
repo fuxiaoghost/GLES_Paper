@@ -616,7 +616,7 @@
     glBlendFunc( GL_SRC_ALPHA , GL_ONE_MINUS_SRC_ALPHA );
     
     // 在缓冲区绘制阴影
-    [self drawShadows];
+    //[self drawShadows];
     glDisable(GL_BLEND);
     
     // 深度读写
