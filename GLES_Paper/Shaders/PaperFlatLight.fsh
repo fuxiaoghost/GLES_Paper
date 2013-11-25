@@ -31,21 +31,21 @@ void main(void){
     }
     
     // 圆角
-    float y = vVaryingVertex.y;
-    float z = vVaryingVertex.z;
-    if (y > 1.0 - radiusY && z > 1.0 - radiusZ) {
-        float ty = y - (1.0-radiusY);
-        float tz = z - (1.0-radiusZ);
-        if ((ty * ty) / (radiusY * radiusY) + (tz * tz)/(radiusZ * radiusZ) > 1.0) {
-            discard;
-        }
-    }else if(y < -1.0 + radiusY && z > 1.0 - radiusZ){
-        float ty = abs(y) - (1.0 - radiusY);
-        float tz = abs(z) - (1.0 - radiusZ);
-        if ((ty * ty) / (radiusY * radiusY) + (tz * tz)/(radiusZ * radiusZ) > 1.0) {
-            discard;
-        }
-    }
+//    float y = vVaryingVertex.y;
+//    float z = vVaryingVertex.z;
+//    if (y > 1.0 - radiusY && z > 1.0 - radiusZ) {
+//        float ty = y - (1.0-radiusY);
+//        float tz = z - (1.0-radiusZ);
+//        if ((ty * ty) / (radiusY * radiusY) + (tz * tz)/(radiusZ * radiusZ) > 1.0) {
+//            discard;
+//        }
+//    }else if(y < -1.0 + radiusY && z > 1.0 - radiusZ){
+//        float ty = abs(y) - (1.0 - radiusY);
+//        float tz = abs(z) - (1.0 - radiusZ);
+//        if ((ty * ty) / (radiusY * radiusY) + (tz * tz)/(radiusZ * radiusZ) > 1.0) {
+//            discard;
+//        }
+//    }
     lowp vec4 textureColor = texture2D(colorMap,vVaryingTexCoord);
     
     if (leftHalf == 1) {
