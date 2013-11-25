@@ -655,6 +655,11 @@
 // 滑动
 - (void)paningGestureReceive:(UIPanGestureRecognizer *)recoginzer{
     if (self.paperStatus == PaperUnfold) {
+        panGesture.enabled = NO;
+        [paningAnimation animateEasyOutWithDuration:0.4 valueFrom:&pinchMove.scope valueTo:0.0f completion:^(BOOL finished) {
+            self.paperStatus = PaperNormal;
+            panGesture.enabled = YES;
+        }];
         return;
     }
     
